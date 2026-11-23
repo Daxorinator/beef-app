@@ -1,5 +1,5 @@
 // Default user settings. Constants only.
-import type { Animal, ButcherPrefs } from '../model/types';
+import type { Animal, ButcherPrefs, PartRequest } from '../model/types';
 
 export const DEFAULT_ANIMAL: Animal = {
   sex: 'steer',
@@ -40,3 +40,17 @@ export const PACK_OPTIONS = {
   dicedPackG: [400, 500, 1000],
   hangingDays: [7, 10, 14, 21, 28, 35],
 };
+
+/** Parts requested by default: what Irish abattoirs usually return (user's experience) plus carcass bones. */
+export const DEFAULT_PARTS: PartRequest[] = [
+  { partId: 'liver', want: true },
+  { partId: 'heart', want: true },
+  { partId: 'kidneys', want: true },
+  { partId: 'tongue', want: true },
+  { partId: 'oxtail', want: true },
+  { partId: 'cheeks', want: true },
+  { partId: 'thick-skirt', want: true },
+  { partId: 'marrow-bones', want: true, fraction: 1 },
+  { partId: 'soup-bones', want: true, fraction: 1 },
+  { partId: 'fat-trim', want: false, fraction: 1, form: 'raw' },
+];

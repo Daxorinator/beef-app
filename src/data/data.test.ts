@@ -5,6 +5,7 @@ import { ADVISORIES } from './advisories';
 import { BREEDS } from './breeds';
 import { COOKING_BY_ID } from './cooking';
 import { AHDB_PER_SIDE_KG as K, AHDB_REFERENCE_CARCASS } from './grading';
+import { CUTTING_LOSS_PCT, DICED_LEAN_PCT, FREEZER_LITRES_PER_KG, HOME_BUTCHER_LOW_FACTOR, TRIM_POOL_LEAN_PCT } from './model-constants';
 import { PART_BY_ID, PARTS } from './parts';
 import { REFERENCE_BONE_PCT, REFERENCE_FAT_PCT, REGION_BY_ID, REGIONS, TRIM_POOL_PCT_OF_CARCASS } from './regions';
 import { SOURCE_BY_ID } from './sources';
@@ -26,6 +27,11 @@ const sourced: Sourced[] = [
   TRIM_POOL_PCT_OF_CARCASS,
   REFERENCE_BONE_PCT,
   REFERENCE_FAT_PCT,
+  CUTTING_LOSS_PCT,
+  FREEZER_LITRES_PER_KG,
+  HOME_BUTCHER_LOW_FACTOR,
+  TRIM_POOL_LEAN_PCT,
+  DICED_LEAN_PCT,
 ];
 
 describe('sources', () => {
@@ -146,7 +152,10 @@ describe('evidence', () => {
 
 describe('breeds', () => {
   it('kill-out values are plausible (40–62 %)', () => {
-    for (const b of BREEDS) for (const k of Object.values(b.killOutPct)) expect(k.value).toBeGreaterThan(40), expect(k.value).toBeLessThan(62);
+    for (const b of BREEDS) for (const k of Object.values(b.killOutPct)) {
+      expect(k.value).toBeGreaterThan(40);
+      expect(k.value).toBeLessThan(62);
+    }
   });
 });
 

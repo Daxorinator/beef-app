@@ -319,6 +319,13 @@ Source: <https://teagasc.ie/wp-content/uploads/media/website/publications/2016/A
   - Show results as a **range (±4–5%)** rather than a single number.
   - **[E]**
 
+- **Implemented model (2026-11-23):**
+  - **Level:** the absolute meat / fat / bone split comes from the AHDB 2010 grid (Table 2 saleable yield, Table 4 fat trim, bone & waste = the remainder), bilinearly interpolated on the 15-point scores. Hanging loss is taken off the meat; the cutting loss is part of the grid's bone & waste.
+  - **Distribution:** the Beef Yield Guide (§4) is used only to share the meat out between regions and the lean-trim pool. Its own absolute level (about 77 % meat before drip at R4H, with ≤ 10 mm fat and 85 % VL trim) runs about 8 points above the grid and well above Irish home-kill results, so it is not used for the level.
+  - **Trim pool** is 93 % VL, the grid's lean-trim definition. Mince at another lean % gains fat from, or sheds fat to, the fat pool.
+  - **Primal / trim split check:** the grid counts flank as lean trim (about 23 % trim overall), while the Yield Guide lists thin flank and the short-rib plate as regions (about 14 % trim). Compared on the same basis, primals excluding flank are 75.8 % of meat in the Yield Guide and 76.4–77.3 % across every grid cell, so the Yield Guide distribution does not overstate steaks and roasts. A test (`engine.test.ts`) keeps the two within 2 points.
+  - **Check (not a fit):** the Teagasc heifer (O−4−, 245 kg, 21 days, T-bone and rib on the bone) models at 165.8 kg (67.7 %) against an actual 143.2 kg (58.4 %), a 9.2-point gap, consistent with the 7–10 points above. The app shows a low band about 13 % below the estimate (144.8 kg for this heifer) for home-butcher trimming.
+
 ---
 
 ## 4. Primal and muscle breakdown (distribution of meat)
