@@ -77,7 +77,7 @@ export const ADVISORIES: Advisory[] = [
     id: 'jersey-steaks',
     when: { breed: ['jersey'] },
     severity: 'tip',
-    message: 'Jersey eye muscles are small, so steaks are small in area. Cut them thicker (3 cm or more) or keep more as roasts.',
+    message: 'Jersey eye muscles are small, so steaks are small in area. Cut them thicker (1¼" or more) or keep more as roasts.',
   },
   {
     id: 'half-share-whole-items',

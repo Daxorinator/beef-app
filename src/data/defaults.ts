@@ -1,4 +1,5 @@
 // Default user settings. Constants only.
+import { STANDARD_STEAK_CM } from './thickness';
 import type { Animal, ButcherPrefs, PartRequest } from '../model/types';
 
 export const DEFAULT_ANIMAL: Animal = {
@@ -20,7 +21,7 @@ export const ROAST_GRAMS_PER_PERSON = { boneless: 250, boneIn: 400, sourceIds: [
 export const DEFAULT_PREFS: ButcherPrefs = {
   familySize: 4,
   roastGramsPerPerson: ROAST_GRAMS_PER_PERSON.boneless,
-  steakThicknessCm: 2.5,
+  steakThicknessCm: STANDARD_STEAK_CM,
   steaksPerPack: 2,
   thicknessOverrides: {},
   mince: { packG: 500, leanPct: 85 },

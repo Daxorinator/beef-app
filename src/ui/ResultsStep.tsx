@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { COOKING_BY_ID } from '../data/cooking';
 import { CUTTING_LOSS_PCT, FREEZER_LITRES_PER_KG, HOME_BUTCHER_FACTOR } from '../data/model-constants';
 import { SOURCES } from '../data/sources';
+import { inchLabel } from '../data/thickness';
 import { categoryOf, type EngineResult, type UseCategory } from '../engine/compute';
 import { buildCutSheet, cutSheetText } from '../engine/cutsheet';
 import type { AppState } from '../engine/state';
@@ -89,7 +90,7 @@ export function ResultsStep({ state, result: r, shareUrl }: { state: AppState; r
                     <td className="num">{kg(l.weightKg)}</td>
                     <td className="num">{l.weightOnly ? <span className="opt" title="No sourced piece size: sold by weight">by wt</span> : l.count ?? '—'}</td>
                     <td className="num">{l.eachKg && !l.weightOnly ? weight(l.eachKg) : '—'}{l.feeds ? <span className={`opt${l.undersized ? ' short' : ''}`}> · feeds {l.feeds}</span> : null}</td>
-                    <td className="num">{l.thicknessCm ? `${l.thicknessCm} cm` : '—'}</td>
+                    <td className="num">{l.thicknessCm ? inchLabel(l.thicknessCm) : '—'}</td>
                     <td className="num">{l.packs ?? '—'}{l.perPack && l.perPack > 1 ? <span className="opt"> ×{l.perPack}</span> : null}</td>
                     <td><CookBadges cookingId={l.cookingId} /><span className="cook-tip">{COOKING_BY_ID[l.cookingId]?.methods.slice(0, 2).join(', ').replace(/-/g, ' ')}</span></td>
                   </tr>

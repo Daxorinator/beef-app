@@ -144,6 +144,7 @@ export interface ProductSpec {
   weightOnly?: boolean;
   /** Provenance of `fraction` (usable share after trimming / of muscle). */
   fractionRef?: { sourceIds: string[]; note: string };
+  /** Thickness in cm; choices are exact inch steps (see data/thickness.ts). */
   defaultThicknessCm?: number;
   allowedThicknessCm?: number[];
   cookingId: string;

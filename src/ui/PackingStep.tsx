@@ -1,4 +1,5 @@
 import { PACK_OPTIONS } from '../data/defaults';
+import { inchLabel, STANDARD_STEAK_CM, STEAK_CM } from '../data/thickness';
 import type { EngineResult } from '../engine/compute';
 import type { ButcherPrefs, FamilySize } from '../model/types';
 import { ThicknessPicker } from './bits';
@@ -11,7 +12,6 @@ interface Props {
 }
 
 const FAMILY: FamilySize[] = [2, 4, 6, 8];
-const STEAK_CM = [1.5, 2, 2.5, 3, 4, 5];
 
 export function PackingStep({ prefs: p, result, onChange }: Props) {
   const set = <K extends keyof ButcherPrefs>(k: K, v: ButcherPrefs[K]) => onChange({ ...p, [k]: v });
@@ -55,8 +55,8 @@ export function PackingStep({ prefs: p, result, onChange }: Props) {
         <div className="row2">
           <label className="field">
             <span>Standard thickness</span>
-            <select value={p.steakThicknessCm} onChange={(e) => onChange({ ...p, steakThicknessCm: Number(e.target.value), thicknessOverrides: Object.fromEntries(Object.entries(p.thicknessOverrides).filter(([id]) => !result.lines.some((l) => l.productId === id && l.spec?.defaultThicknessCm === 2.5))) })}>
-              {STEAK_CM.map((x) => <option key={x} value={x}>{x} cm</option>)}
+            <select value={p.steakThicknessCm} onChange={(e) => onChange({ ...p, steakThicknessCm: Number(e.target.value), thicknessOverrides: Object.fromEntries(Object.entries(p.thicknessOverrides).filter(([id]) => !result.lines.some((l) => l.productId === id && l.spec?.defaultThicknessCm === STANDARD_STEAK_CM))) })}>
+              {STEAK_CM.map((x) => <option key={x} value={x}>{inchLabel(x)}</option>)}
             </select>
           </label>
           <label className="field">

@@ -1,5 +1,6 @@
 import { COOKING_BY_ID } from '../data/cooking';
 import { SOURCE_BY_ID } from '../data/sources';
+import { inchLabel } from '../data/thickness';
 import type { Line } from '../engine/compute';
 import type { Advisory, EvidenceLevel, ProductSpec, Sourced } from '../model/types';
 import { weight } from './format';
@@ -74,7 +75,7 @@ export function ThicknessPicker({ line, spec, onThickness }: { line: Line; spec:
     <label className="thick">
       <span>{line.name}</span>
       <select value={line.thicknessCm} onChange={(e) => onThickness(spec.id, Number(e.target.value))}>
-        {spec.allowedThicknessCm.map((t) => <option key={t} value={t}>{t} cm</option>)}
+        {spec.allowedThicknessCm.map((t) => <option key={t} value={t}>{inchLabel(t)}</option>)}
       </select>
       {!line.weightOnly && line.count ? <span className="hint">≈ {line.count} at {weight(line.eachKg!)}</span> : <span className="hint">sold by weight</span>}
     </label>

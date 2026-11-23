@@ -5,6 +5,7 @@ import { COOKING_BY_ID } from '../data/cooking';
 import { PART_BY_ID } from '../data/parts';
 import { FREEZER_LITRES_PER_KG, DICED_LEAN_PCT, TRIM_POOL_LEAN_PCT } from '../data/model-constants';
 import { QPS_SPEC } from '../data/grading';
+import { inchLabel, STANDARD_STEAK_CM } from '../data/thickness';
 import { REGION_BY_ID, TRIM_POOL_PCT_OF_CARCASS } from '../data/regions';
 import type { Advisory, ButcherPrefs, MassBalance, ProductLine, ProductSpec } from '../model/types';
 import { carcassAndLive, composition, effectiveGrade, type Composition, type Grade } from './carcass';
@@ -86,8 +87,8 @@ export function thicknessFor(p: ProductSpec, prefs: ButcherPrefs): number | unde
   if (p.defaultThicknessCm === undefined) return undefined;
   const o = prefs.thicknessOverrides[p.id];
   if (o !== undefined && (!p.allowedThicknessCm || p.allowedThicknessCm.includes(o))) return o;
-  // The global steak thickness applies to standard steaks (default 2.5 cm) where that thickness is allowed.
-  if (p.kind === 'steak' && p.defaultThicknessCm === 2.5 && (!p.allowedThicknessCm || p.allowedThicknessCm.includes(prefs.steakThicknessCm)))
+  // The global steak thickness applies to standard steaks (default 1") where that thickness is allowed.
+  if (p.kind === 'steak' && p.defaultThicknessCm === STANDARD_STEAK_CM && (!p.allowedThicknessCm || p.allowedThicknessCm.includes(prefs.steakThicknessCm)))
     return prefs.steakThicknessCm;
   return p.defaultThicknessCm;
 }
@@ -111,7 +112,7 @@ function sizeProduct(line: Line, p: ProductSpec, wholeCarcassKg: number, prefs: 
     line.eachKg = w / count;
     line.perPack = prefs.steaksPerPack;
     line.packs = Math.ceil(count / prefs.steaksPerPack);
-    line.sizeNote = `${p.sizeRef.note ?? ''}; scaled by (carcass ÷ ${p.sizeRef.carcassKg} kg)^⅔ to ${(each * 1000).toFixed(0)} g at ${line.thicknessCm} cm`;
+    line.sizeNote = `${p.sizeRef.note ?? ''}; scaled by (carcass ÷ ${p.sizeRef.carcassKg} kg)^⅔ to ${(each * 1000).toFixed(0)} g at ${inchLabel(line.thicknessCm)}`;
     return;
   }
   if (p.kind === 'roast' || p.kind === 'cured') {

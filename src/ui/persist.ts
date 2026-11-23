@@ -1,6 +1,7 @@
 // Saving state locally and in share links. Unknown or malformed input falls back to defaults.
 import { BREED_BY_ID } from '../data/breeds';
 import { DEFAULT_ANIMAL, DEFAULT_PARTS, DEFAULT_PREFS } from '../data/defaults';
+import { STEAK_CM } from '../data/thickness';
 import type { AppState } from '../engine/state';
 
 const KEY = 'beef-app:state:v1';
@@ -24,6 +25,8 @@ export function sanitize(x: unknown): AppState | undefined {
     labelling: { ...DEFAULT_PREFS.labelling, ...(p.labelling ?? {}) },
     thicknessOverrides: { ...(p.thicknessOverrides ?? {}) },
   };
+  // Thicknesses saved before the switch to inches are no longer valid choices: fall back to the defaults.
+  if (!STEAK_CM.includes(prefs.steakThicknessCm)) prefs.steakThicknessCm = DEFAULT_PREFS.steakThicknessCm;
   const selections = o.selections && typeof o.selections === 'object' ? o.selections : {};
   const partRequests = Array.isArray(o.partRequests) ? o.partRequests.filter((r) => r && typeof r.partId === 'string') : DEFAULT_PARTS;
   return { animal, prefs, selections, partRequests };

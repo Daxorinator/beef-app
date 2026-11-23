@@ -1,6 +1,7 @@
 // Human-readable instructions for the butcher / abattoir. Pure function of state + result.
 import { BREED_BY_ID } from '../data/breeds';
 import { REGIONS } from '../data/regions';
+import { inchLabel } from '../data/thickness';
 import type { CutSheet } from '../model/types';
 import type { EngineResult, Line } from './compute';
 import type { AppState } from './state';
@@ -13,7 +14,7 @@ export const SEX_LABEL = { heifer: 'Heifer', steer: 'Steer', bull: 'Bull', cow: 
 
 function describeLine(l: Line): string {
   const bits: string[] = [];
-  if (l.thicknessCm) bits.push(`${l.thicknessCm} cm thick`);
+  if (l.thicknessCm) bits.push(`${inchLabel(l.thicknessCm)} thick`);
   if (l.kind === 'steak' && l.perPack) bits.push(`${l.perPack} per pack`);
   if ((l.kind === 'roast' || l.kind === 'cured') && l.eachKg) bits.push(`joints of about ${kg(l.eachKg)}${l.feeds ? `, each feeds ${l.feeds}` : ''}`);
   if (l.kind === 'diced') bits.push('diced, bagged');

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BREEDS } from '../data/breeds';
 import { DEFAULT_ANIMAL, DEFAULT_PARTS, DEFAULT_PREFS } from '../data/defaults';
 import { HOME_KILL_CALIBRATION } from '../data/grading';
+import { inch, inchLabel } from '../data/thickness';
 import { CUTTING_LOSS_PCT, hangingLossPctOfCold } from '../data/model-constants';
 import { REGION_BY_ID, REGIONS } from '../data/regions';
 import type { Animal, Sex } from '../model/types';
@@ -136,12 +137,12 @@ describe('sizes and counts', () => {
     expect(half.eachKg! / whole.eachKg!).toBeCloseTo(1, 1);
     expect(half.count! / whole.count!).toBeCloseTo(0.5, 1);
   });
-  it('ribeye at 356 kg and 2.54 cm is the USDA 361 g', () => {
-    const r = compute(base({ weightBasis: 'carcass', weightKg: 356 }, { selections: { 'fore-rib': 'ribeye' }, prefs: { ...DEFAULT_PREFS, steakThicknessCm: 2.5 } }));
+  it('ribeye at 356 kg and 1" is the USDA 361 g', () => {
+    const r = compute(base({ weightBasis: 'carcass', weightKg: 356 }, { selections: { 'fore-rib': 'ribeye' }, prefs: { ...DEFAULT_PREFS, steakThicknessCm: inch(1) } }));
     const l = r.lines.find((x) => x.productId === 'ribeye-steak')!;
     // count rounding moves eachKg a little off the nominal size
-    expect(l.eachKg! * 1000).toBeGreaterThan(361 * (2.5 / 2.54) * 0.93);
-    expect(l.eachKg! * 1000).toBeLessThan(361 * (2.5 / 2.54) * 1.07);
+    expect(l.eachKg! * 1000).toBeGreaterThan(361 * 0.93);
+    expect(l.eachKg! * 1000).toBeLessThan(361 * 1.07);
   });
   it('whole AHDB pieces count two per carcass (one per side), one on a half share', () => {
     const sel = { loin: 'separate', 'loin/fillet': 'whole' };
@@ -256,15 +257,15 @@ describe('primal / trim split agrees with the AHDB 2010 grid', () => {
 describe('steak thickness drives the count', () => {
   it('thicker steaks: fewer, heavier, same total weight', () => {
     const at = (cm: number) => compute(base({}, { selections: { 'fore-rib': 'ribeye' }, prefs: { ...DEFAULT_PREFS, steakThicknessCm: cm } })).lines.find((l) => l.productId === 'ribeye-steak')!;
-    const thin = at(2);
-    const thick = at(4);
+    const thin = at(inch(0.75));
+    const thick = at(inch(1.5));
     expect(thick.count!).toBeLessThan(thin.count!);
     expect(thick.eachKg!).toBeGreaterThan(thin.eachKg!);
     expect(thick.weightKg).toBeCloseTo(thin.weightKg, 9);
   });
   it('a per-cut override beats the standard thickness', () => {
-    const r = compute(base({}, { selections: { 'fore-rib': 'ribeye' }, prefs: { ...DEFAULT_PREFS, thicknessOverrides: { 'ribeye-steak': 4 } } }));
-    expect(r.lines.find((l) => l.productId === 'ribeye-steak')!.thicknessCm).toBe(4);
+    const r = compute(base({}, { selections: { 'fore-rib': 'ribeye' }, prefs: { ...DEFAULT_PREFS, thicknessOverrides: { 'ribeye-steak': inch(1.5) } } }));
+    expect(r.lines.find((l) => l.productId === 'ribeye-steak')!.thicknessCm).toBe(inch(1.5));
   });
 });
 
@@ -313,9 +314,9 @@ describe('anatomical count bounds (per side)', () => {
   const animals = BREEDS.flatMap((b) => (['steer', 'heifer', 'bull', 'cow'] as Sex[]).map((sex) => ({ breed: b.id, sex })));
   const count = (sel: Record<string, string>, id: string, a: Partial<Animal>, cm?: number) =>
     compute(base({ ...a, share: 'half' }, { selections: sel, prefs: { ...DEFAULT_PREFS, ...(cm ? { thicknessOverrides: { [id]: cm } } : {}) } })).lines.find((l) => l.productId === id)?.count ?? 0;
-  it.each(animals)('$breed $sex: bone-in rib steaks ≤ 4 (ribs 7–10) at 5 cm', (a) => {
-    expect(count({ 'fore-rib': 'cote' }, 'cote-de-boeuf', a, 5)).toBeLessThanOrEqual(4);
-    expect(count({ 'fore-rib': 'tomahawk' }, 'tomahawk', a, 5)).toBeLessThanOrEqual(4);
+  it.each(animals)('$breed $sex: bone-in rib steaks ≤ 4 (ribs 7–10) at 2"', (a) => {
+    expect(count({ 'fore-rib': 'cote' }, 'cote-de-boeuf', a, inch(2))).toBeLessThanOrEqual(4);
+    expect(count({ 'fore-rib': 'tomahawk' }, 'tomahawk', a, inch(2))).toBeLessThanOrEqual(4);
   });
   it.each(animals)('$breed $sex: one of each whole muscle; ≤ 3 short ribs', (a) => {
     expect(count({ loin: 'separate', 'loin/fillet': 'whole' }, 'whole-fillet', a)).toBe(1);
@@ -323,5 +324,17 @@ describe('anatomical count bounds (per side)', () => {
     expect(count({ rump: 'split' }, 'tri-tip', a)).toBe(1);
     expect(count({ 'thin-flank': 'bavette' }, 'bavette', a)).toBe(1);
     expect(count({ plate: 'short-ribs' }, 'short-ribs', a)).toBeLessThanOrEqual(3);
+  });
+});
+
+describe('thickness in inches', () => {
+  it('labels inch steps', () => {
+    expect([0.125, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 2.5].map((x) => inchLabel(inch(x)))).toEqual(['⅛"', '¼"', '½"', '¾"', '1"', '1¼"', '1½"', '2"', '2½"']);
+  });
+  it('every cut default is one of its allowed inch steps', () => {
+    for (const region of REGIONS)
+      for (const o of region.options)
+        for (const p of [...(o.products ?? []), ...(o.parts ?? []).flatMap((pt) => pt.options.flatMap((oo) => oo.products ?? []))])
+          if (p.defaultThicknessCm !== undefined && p.allowedThicknessCm) expect(p.allowedThicknessCm, p.id).toContain(p.defaultThicknessCm);
   });
 });
