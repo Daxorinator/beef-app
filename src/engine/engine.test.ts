@@ -45,9 +45,9 @@ describe('grade scaling', () => {
     const c = composition({ conformation: 'R', fatClass: '4+', fromUser: true }, 14);
     expect(c.commercialMeatPct).toBeCloseTo(68.7 - hangingLossPctOfCold(14), 9);
     expect(c.meatPct).toBeLessThan(c.commercialMeatPct);
-    expect(c.fatPct).toBeCloseTo(13.2 + c.homeTrimPct, 9);
+    expect(c.fatPct).toBeCloseTo(13.2, 9);
     expect(c.boneFactor).toBeCloseTo(1, 9);
-    expect(c.meatPct + c.fatPct + c.bonePct + c.hangingLossPct + c.cuttingLossPct).toBeCloseTo(100, 9);
+    expect(c.meatPct + c.fatPct + c.bonePct + c.hangingLossPct + c.cuttingLossPct + c.homeTrimPct).toBeCloseTo(100, 9);
     expect(c.gridClamped).toBe(false);
   });
   it('better conformation and less fat give more meat', () => {
@@ -81,7 +81,7 @@ describe('mass closure', () => {
   it.each(cases)('$breed $sex $share $hangingDays d', (c) => {
     const r = compute(base({ ...c, weightBasis: 'live', weightKg: 560 }));
     const b = r.balance;
-    const sum = b.meatKg + b.fatPoolKg + b.marrowKg + b.soupBoneKg + b.hangingLossKg + b.cuttingLossKg;
+    const sum = b.meatKg + b.fatPoolKg + b.marrowKg + b.soupBoneKg + b.hangingLossKg + b.cuttingLossKg + b.butcherTrimKg;
     expect(sum).toBeCloseTo(b.carcassKg, 6);
     expect(b.carcassKg).toBeCloseTo(r.wholeCarcassKg * (c.share === 'half' ? 0.5 : 1), 6);
     expect(b.fatPoolKg).toBeGreaterThan(0);
@@ -95,7 +95,7 @@ describe('mass closure', () => {
           const s = { ...DEFAULT_PREFS, mince: { ...DEFAULT_PREFS.mince, leanPct }, trimSplit: { mince: 40, burgers: 40, diced: 20 } };
           const r = compute(base({}, { selections: { [region.id]: o.id }, prefs: s }));
           const b = r.balance;
-          expect(b.meatKg + b.fatPoolKg + b.marrowKg + b.soupBoneKg + b.hangingLossKg + b.cuttingLossKg, `${region.id}/${o.id}/${leanPct}`).toBeCloseTo(b.carcassKg, 6);
+          expect(b.meatKg + b.fatPoolKg + b.marrowKg + b.soupBoneKg + b.hangingLossKg + b.cuttingLossKg + b.butcherTrimKg, `${region.id}/${o.id}/${leanPct}`).toBeCloseTo(b.carcassKg, 6);
         }
   });
 
@@ -214,7 +214,7 @@ describe('advisories', () => {
   });
 });
 
-describe('Teagasc home-kill heifer comparison (check, not a fit)', () => {
+describe('Teagasc home-kill heifer calibration (the realistic factor is derived from this heifer, so this confirms it, not validates it)', () => {
   it('commercial basis is 7–10 points high; the realistic estimate lands near the actual 143.2 kg', () => {
     const c = HOME_KILL_CALIBRATION;
     const r = compute(
@@ -265,5 +265,26 @@ describe('steak thickness drives the count', () => {
   it('a per-cut override beats the standard thickness', () => {
     const r = compute(base({}, { selections: { 'fore-rib': 'ribeye' }, prefs: { ...DEFAULT_PREFS, thicknessOverrides: { 'ribeye-steak': 4 } } }));
     expect(r.lines.find((l) => l.productId === 'ribeye-steak')!.thicknessCm).toBe(4);
+  });
+});
+
+describe('roasts depend on the size of the animal', () => {
+  it('half-share Jersey cow, family of 8: small joints are flagged with a tip', () => {
+    const r = compute(base({ breed: 'jersey', sex: 'cow', ageMonths: 72, weightKg: 420, share: 'half' }, { selections: { 'thick-flank': 'pot-roast', feather: 'braise' }, prefs: { ...DEFAULT_PREFS, familySize: 8 } }));
+    const feather = r.lines.find((l) => l.productId === 'feather-blade-joint')!;
+    expect(feather.undersized).toBe(true);
+    expect(feather.feeds!).toBeLessThan(8);
+    expect(r.advisories.some((a) => a.id === 'roast-undersized')).toBe(true);
+  });
+  it('a typical steer, family of 4: joints feed about 4', () => {
+    const l = compute(base({}, { selections: { topside: 'roasts' } })).lines.find((x) => x.productId === 'topside-roast')!;
+    expect(l.undersized).toBe(false);
+    expect(l.feeds).toBeGreaterThanOrEqual(3);
+    expect(l.feeds).toBeLessThanOrEqual(5);
+  });
+  it('craft-butcher trim is not returnable fat', () => {
+    const r = compute(base());
+    expect(r.balance.butcherTrimKg).toBeGreaterThan(0);
+    expect(r.balance.fatPoolKg / r.balance.carcassKg).toBeLessThan(0.12);
   });
 });

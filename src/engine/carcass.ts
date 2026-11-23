@@ -88,7 +88,7 @@ export interface Composition {
   meatPct: number;
   /** Commercial-boning meat (AHDB grid), % of carcass: the upper bound. */
   commercialMeatPct: number;
-  /** Extra trimming by a craft butcher (commercial − realistic), included in fatPct. */
+  /** Extra trimming by a craft butcher (commercial − realistic): lean trimmed off and waste, not returnable fat. */
   homeTrimPct: number;
   gridClamped: boolean;
 }
@@ -96,7 +96,7 @@ export interface Composition {
 /**
  * Level basis: AHDB 2010 EUROP grid at the animal's grade (commercial boning 24–72 h, so no maturation loss yet).
  *  commercial meat = saleable S − hanging loss; realistic meat = commercial × HOME_BUTCHER_FACTOR (the rest is extra
- *  trim, added to fat); fat = fat trim T; bone pool = bone & waste (100 − S − T) less the cutting loss it
+ *  craft-butcher trim & waste, its own term); fat = fat trim T; bone pool = bone & waste (100 − S − T) less the cutting loss it
  *  contains (cutting waste is already in the grid's bone & waste, since the grid was measured after commercial boning).
  */
 export function composition(grade: Grade, hangingDays: number): Composition {
@@ -111,7 +111,7 @@ export function composition(grade: Grade, hangingDays: number): Composition {
   const commercialMeatPct = s.value - hangingLossPct;
   const meatPct = commercialMeatPct * HOME_BUTCHER_FACTOR.value;
   const homeTrimPct = commercialMeatPct - meatPct;
-  const fatPct = t.value + homeTrimPct;
+  const fatPct = t.value;
   const bonePct = 100 - s.value - t.value - cuttingLossPct;
   const refBone = 100 - refS - refT - cuttingLossPct;
   return { meatFactor: meatPct / YG_MEAT_PCT, boneFactor: bonePct / refBone, fatPct, bonePct, hangingLossPct, cuttingLossPct, meatPct, commercialMeatPct, homeTrimPct, gridClamped: s.clamped || t.clamped };

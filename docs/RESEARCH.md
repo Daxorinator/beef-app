@@ -324,7 +324,16 @@ Source: <https://teagasc.ie/wp-content/uploads/media/website/publications/2016/A
   - **Distribution:** the Beef Yield Guide (§4) is used only to share the meat out between regions and the lean-trim pool. Its own absolute level (about 77 % meat before drip at R4H, with ≤ 10 mm fat and 85 % VL trim) runs about 8 points above the grid and well above Irish home-kill results, so it is not used for the level.
   - **Trim pool** is 93 % VL, the grid's lean-trim definition. Mince at another lean % gains fat from, or sheds fat to, the fat pool.
   - **Primal / trim split check:** the grid counts flank as lean trim (about 23 % trim overall), while the Yield Guide lists thin flank and the short-rib plate as regions (about 14 % trim). Compared on the same basis, primals excluding flank are 75.8 % of meat in the Yield Guide and 76.4–77.3 % across every grid cell, so the Yield Guide distribution does not overstate steaks and roasts. A test (`engine.test.ts`) keeps the two within 2 points.
-  - **Check (not a fit):** the Teagasc heifer (O−4−, 245 kg, 21 days, T-bone and rib on the bone) models at 165.8 kg (67.7 %) against an actual 143.2 kg (58.4 %), a 9.2-point gap, consistent with the 7–10 points above. Per the user (2026-11-23), headline yields must reflect realistic expectations, so every cut weight and count is computed at the home-butcher level: commercial meat × 0.873 (8.5 of ~67 points), with the extra trim added to the fat/trim pool. For this heifer that gives 144.8 kg against the actual 143.2 kg. The commercial figure is shown only as an upper bound.
+  - **Calibration (not validation):** the Teagasc heifer (O−4−, 245 kg, T-bone and rib on the bone; hanging time not stated, 21 days assumed) models at 165.8 kg (67.7 %) on the commercial basis against an actual 143.2 kg (58.4 %), a 9.2-point gap, consistent with the 7–10 points above. Per the user (2026-11-23), headline yields must reflect realistic expectations, so every cut weight and count is computed at the home-butcher level: commercial meat × 0.873 (8.5 of ~67 points). The difference is its own mass-balance term ("extra trim & waste"), not returnable fat. For this heifer the realistic level gives 144.8 kg. Because the factor is derived from this one animal, that match confirms the calibration rather than validating it.
+  - **Why the gap? Not proven.** The source gives the cut list and totals only, not a breakdown of what was trimmed. Likely contributors:
+    1. Harder trimming of fat, sinew and small lean scraps than in a commercial boning hall, where every scrap of 93 % VL trim is counted as saleable.
+    2. Small lean trim kept by the butcher or discarded rather than minced.
+    3. Seam fat typical of a dairy-cross heifer at fat 4−.
+    4. Grade uncertainty: a whole fat class changes the grid yield by 2–3 points.
+    5. Hanging time, if it was longer than the 21 days assumed.
+    6. The cut list is rounded to whole kilograms.
+    
+    Bone left in is not a cause: the engine already counts the T-bone and rib bone. **Needed:** one or two more real Irish home-kill cut lists (ideally an Angus steer and a dairy cow) to test the 0.873 factor.
 
 ---
 

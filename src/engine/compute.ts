@@ -24,6 +24,10 @@ export interface Line extends ProductLine {
   weightOnly?: boolean;
   /** How the piece / steak size was derived (shown on hover). */
   sizeNote?: string;
+  /** Roasts: people each joint feeds at the chosen grams per person. */
+  feeds?: number;
+  /** Roasts: too little meat for even one joint of the household size. */
+  undersized?: boolean;
   spec?: ProductSpec;
 }
 
@@ -52,6 +56,8 @@ export interface EngineResult {
     soupBoneKg: number;
     boneInCutsKg: number;
     fatPoolKg: number;
+    /** Extra trim & waste from craft-butcher trimming (commercial − realistic meat). */
+    butcherTrimKg: number;
     trimPoolKg: number;
   };
   lines: Line[];
@@ -115,6 +121,8 @@ function sizeProduct(line: Line, p: ProductSpec, wholeCarcassKg: number, prefs: 
     line.eachKg = w / count;
     line.perPack = 1;
     line.packs = count;
+    line.feeds = Math.max(1, Math.floor((line.eachKg * 1000) / (p.boneFactor ?? 1) / prefs.roastGramsPerPerson));
+    line.undersized = w < target * 0.75;
     line.sizeNote = `Joints sized for ${prefs.familySize} people at ${prefs.roastGramsPerPerson} g boneless each${p.boneFactor ? ' (plus bone)' : ''}`;
     return;
   }
@@ -227,6 +235,7 @@ export function compute(state: AppState): EngineResult {
   const meatKg = lines.reduce((s, l) => s + l.weightKg, 0);
   const hangingLossKg = (carcassKg * comp.hangingLossPct) / 100;
   const cuttingLossKg = (carcassKg * comp.cuttingLossPct) / 100;
+  const butcherTrimKg = (carcassKg * comp.homeTrimPct) / 100;
 
   // ───── Parts ─────
   const parts: PartLine[] = [];
@@ -278,6 +287,9 @@ export function compute(state: AppState): EngineResult {
   }
   if (prefs.mince.leanPct < poolLean && fatPoolKg < 0)
     add({ id: 'mince-fat-short', when: {}, severity: 'warning', message: 'There is not enough fat trim for mince this fatty. Pick a leaner mince.' });
+  const small = lines.filter((l) => l.undersized);
+  if (small.length)
+    add({ id: 'roast-undersized', when: {}, severity: 'tip', message: `Not enough meat for a full ${prefs.familySize}-person joint: ${small.map((l) => `${l.name} (feeds ${l.feeds})`).join(', ')}. Consider steaks or diced beef for ${small.length > 1 ? 'these cuts' : 'this cut'}, or a smaller household size.` });
   const order = { blocked: 0, warning: 1, tip: 2, info: 3 } as const;
   advisories.sort((x, y) => order[x.severity] - order[y.severity]);
 
@@ -319,6 +331,7 @@ export function compute(state: AppState): EngineResult {
       boneInCutsKg,
       fatPoolKg,
       trimPoolKg,
+      butcherTrimKg,
     },
     lines,
     parts,

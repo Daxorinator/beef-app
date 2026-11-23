@@ -15,7 +15,7 @@ function describeLine(l: Line): string {
   const bits: string[] = [];
   if (l.thicknessCm) bits.push(`${l.thicknessCm} cm thick`);
   if (l.kind === 'steak' && l.perPack) bits.push(`${l.perPack} per pack`);
-  if ((l.kind === 'roast' || l.kind === 'cured') && l.eachKg) bits.push(`joints of about ${kg(l.eachKg)}`);
+  if ((l.kind === 'roast' || l.kind === 'cured') && l.eachKg) bits.push(`joints of about ${kg(l.eachKg)}${l.feeds ? `, each feeds ${l.feeds}` : ''}`);
   if (l.kind === 'diced') bits.push('diced, bagged');
   const each = l.eachKg !== undefined ? (l.eachKg < 1 ? `${Math.round(l.eachKg * 1000)} g` : kg(l.eachKg)) : '';
   const est = l.count && !l.weightOnly ? ` (≈ ${l.count} × ${each} = ${kg(l.weightKg)})` : ` (≈ ${kg(l.weightKg)}, by weight)`;

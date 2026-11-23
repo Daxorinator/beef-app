@@ -61,7 +61,7 @@ export const FREEZER_LITRES_PER_KG: Sourced = d(Math.round((400 / 143.2) * 100) 
  * Realistic take-home relative to commercial boning (AHDB grid). The Teagasc home-kill heifer returned 58.4 % of
  * carcass as meat, 7–10 points below the commercial grid yield for its grade (RESEARCH §3.3): craft butchers trim
  * harder and the customer gets less. Midpoint 8.5 points of ~67 % ≈ 12.7 % relative. All cut weights and counts use
- * this level; the commercial figure is shown only as an upper bound. The extra trim goes to the fat/trim pool.
+ * this level; the commercial figure is shown only as an upper bound. The extra trim is its own mass-balance term (not returnable fat).
  */
 export const HOME_BUTCHER_FACTOR: Sourced = d(
   Math.round((1 - 8.5 / 67) * 1000) / 1000,
