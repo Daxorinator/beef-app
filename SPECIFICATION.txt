@@ -1,0 +1,31 @@
+beef-app is a web app which allows users to specify the parameters of a cow, their preference of cuts, and receive an accurate butchering list outlining the specified cuts, their thickness and estimated weight, and the estimated number of cuts.
+
+The application should interactively show the user all available cuts on the cow (in their England / Ireland coloquail names) using a 2D or 3D rendering as appropriate, and then walk them through selecting their cuts,
+including which ones are mutually exclusive, which ones can be kept whole or broken down, etc.
+
+Parameters of a cow:
+- Sex (Cow / Bull)
+- Age
+- Weight
+- Breed
+- Any other relevant butchering parameters from own research
+
+It is up to the implementer to thoroughly research:
+- Available cuts when butchering a whole cow or half cow
+- Weights, yields, and so on, by breed, sex, age, live weight, etc. (with focus on the Jersey and Aberdeen Angus breeds to begin with)
+- Common choices offered by butchers when butchering on behalf of a farm, including:
+    - Non-cut options such as stew meat, burger patties, minced / ground beef, and other options for off-cuts
+    - Other non-meat parts of the cow which can be returned from the abatoir
+    - Organs, bones, etc. which can be returned
+    - Thickness
+    - Number of steaks / cuts / minced beef / burgers per package
+
+Other useful settings might include e.g. family size (2, 4, 6, or 8 persons) to determine size requirements for roasts.
+It is important that the user can select roasts, steaks, or a combination of both depending on the size of the animal and the customer's needs.
+
+Ultimately, the app should help the customer determine:
+- What options are available when butchering a beef
+- What to request from their butcher (a cut sheet)
+- What the estimated yield from their beef is in terms of weight
+- What the estimated yield from their beef is in terms of cuts (a list, with counts)
+- The best cooking methods for those cuts (wet or dry cook, low or high temp cook, slow or fast cook)
