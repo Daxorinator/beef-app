@@ -190,12 +190,27 @@ export const REGIONS: Region[] = [
         products: [steak({ id: 'tomahawk', name: 'Tomahawk steak', fraction: RIB_BONE_IN_STEAK_FRACTION, fractionRef: F.ribBoneInSteaks, boneFactor: BONE.foreRib, ...usdaSteak(462, 'rib eye steak, bone-in, lip-on (excl. long bone)'), defaultThicknessCm: inch(2), allowedThicknessCm: THICK_CM, cookingId: 'thick-bone-in-steak' })],
       },
       {
-        id: 'split',
-        label: 'Rolled rib roast + rib steaks',
-        products: [
-          { id: 'rolled-rib-half', name: 'Rolled rib roast', kind: 'roast', fraction: 0.475, fractionRef: { sourceIds: ['tamu-rib-loin'], note: 'Half the fore rib at roast yield 95 %' }, cookingId: 'prime-roast' },
-          steak({ id: 'ribeye-steak-half', name: 'Rib steak (ribeye)', fraction: RIBEYE_STEAK_FRACTION / 2, fractionRef: { ...F.ribeyeFromRoll, note: `Other half of the fore rib: ${F.ribeyeFromRoll.note}` }, ...usdaSteak(361, 'rib eye steak, boneless, lip-on'), cookingId: 'prime-steak' }),
-        ],
+        id: 'mix',
+        label: 'Rib by rib: mix roasts, côtes and steaks',
+        description: 'Ribs 7–10 are cut one rib at a time, so each rib can go a different way: on-the-bone roast, rolled roast, côte de boeuf, tomahawk or rib steaks.',
+        products: [],
+        allocation: {
+          unit: ['rib', 'ribs'],
+          unitsPerSide: 4,
+          remainder: 'steaks',
+          defaultsPerSide: { 'roast-on-bone': 2, cote: 1 },
+          uses: [
+            { id: 'roast-on-bone', label: 'Rib roast on the bone', sizing: 'joints-of-units', product: { id: 'mix-rib-roast', name: 'Rib roast (on the bone)', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, boneFactor: BONE.foreRib, cookingId: 'prime-roast' } },
+            { id: 'rolled', label: 'Rolled rib roast', sizing: 'standard', product: { id: 'mix-rolled-rib', name: 'Rolled rib roast', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, cookingId: 'prime-roast' } },
+            { id: 'cote', label: 'Côte de boeuf (one per rib)', sizing: 'one-per-unit', product: steak({ id: 'mix-cote', name: 'Côte de boeuf', fraction: RIB_BONE_IN_STEAK_FRACTION, fractionRef: F.ribBoneInSteaks, boneFactor: BONE.foreRib, ...usdaSteak(462, 'rib eye steak, bone-in, lip-on'), defaultThicknessCm: undefined, allowedThicknessCm: undefined, cookingId: 'thick-bone-in-steak' }) },
+            {
+              id: 'tomahawk', label: 'Tomahawk (one per rib)', sizing: 'one-per-unit',
+              product: steak({ id: 'mix-tomahawk', name: 'Tomahawk steak', fraction: RIB_BONE_IN_STEAK_FRACTION, fractionRef: F.ribBoneInSteaks, boneFactor: BONE.foreRib, ...usdaSteak(462, 'rib eye steak, bone-in, lip-on (excl. long bone)'), defaultThicknessCm: undefined, allowedThicknessCm: undefined, cookingId: 'thick-bone-in-steak' }),
+              excludes: [{ path: 'plate', optionIds: ['short-ribs', 'jacobs-ladder'], reason: 'Tomahawk bones run down into the short-rib plate, so it can no longer be cut as bone-in short ribs.' }],
+            },
+            { id: 'steaks', label: 'Rib steaks (boneless)', sizing: 'standard', product: steak({ id: 'mix-ribeye', name: 'Rib steak (ribeye)', aka: ['Scotch fillet', 'Entrecôte'], fraction: RIBEYE_STEAK_FRACTION, fractionRef: F.ribeyeFromRoll, ...usdaSteak(361, 'rib eye steak, boneless, lip-on'), cookingId: 'prime-steak' }) },
+          ],
+        },
       },
     ],
   },
@@ -288,7 +303,8 @@ export const REGIONS: Region[] = [
               { id: 'wing-rib', label: 'Wing rib (sirloin on the bone) roast', products: [{ id: 'wing-rib', name: 'Wing rib roast (on the bone)', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, boneFactor: BONE.stripBoneIn, cookingId: 'prime-roast' }] },
               {
                 id: 'split',
-                label: 'Half roast, half steaks',
+                label: 'Sirloin roasts + sirloin steaks (you choose the mix)',
+                balance: { roastId: 'sirloin-roast-half', steakId: 'sirloin-steak-half' },
                 products: [
                   { id: 'sirloin-roast-half', name: 'Sirloin roast', kind: 'roast', fraction: 0.475, fractionRef: { sourceIds: ['tamu-rib-loin'], note: 'Half at roast yield 95 %' }, cookingId: 'prime-roast' },
                   steak({ id: 'sirloin-steak-half', name: 'Sirloin (striploin) steak', fraction: 0.425, fractionRef: { sourceIds: ['tamu-rib-loin'], note: 'Half at strip-steak yield 85 %' }, ...usdaSteak(302, 'loin, top loin steak, boneless, lip-on'), cookingId: 'prime-steak' }),
@@ -401,7 +417,8 @@ export const REGIONS: Region[] = [
       { id: 'minute', label: 'Minute steaks / stir-fry', products: [steak({ id: 'minute-steak', name: 'Minute steak', fraction: 0.729, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB topside without gracilis' }, ...usdaSteak(344, 'round, top round steak, boneless'), defaultThicknessCm: inch(0.25), allowedThicknessCm: THIN_CM, cookingId: 'minute-steak' })] },
       {
         id: 'split',
-        label: 'Half round roasts, half round steaks',
+        label: 'Round roasts + round steaks (you choose the mix)',
+        balance: { roastId: 'topside-roast-half', steakId: 'topside-round-steak-half' },
         products: [
           { id: 'topside-roast-half', name: 'Round roast (topside)', kind: 'roast', fraction: 0.475, fractionRef: { sourceIds: ['tamu-rib-loin'], note: 'Half at roast yield 95 %' }, cookingId: 'lean-roast' },
           steak({ id: 'topside-round-steak-half', name: 'Round steak (topside)', fraction: 0.365, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'Half at 72.9 % (topside without gracilis)' }, ...usdaSteak(344, 'round, top round steak, boneless'), defaultThicknessCm: inch(0.5), cookingId: 'flash-steak' }),

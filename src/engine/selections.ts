@@ -67,7 +67,10 @@ export function optionsAt(path: string): CutOption[] {
  * Apply defaults and exclusions. If an exclusion rules out the current choice at a path, the default (or the first
  * allowed option) is used instead and a notice is returned.
  */
-export function resolveSelections(input: Selections): ResolvedSelections {
+/** Exclusions that depend on more than the selected option (e.g. any tomahawk in a rib-by-rib plan). */
+export type ExtraExclusion = Omit<Exclusion, never>;
+
+export function resolveSelections(input: Selections, extra: ExtraExclusion[] = []): ResolvedSelections {
   let sel: Selections = { ...input };
   const notices: SelectionNotice[] = [];
   let exclusions: Exclusion[] = [];
@@ -77,7 +80,7 @@ export function resolveSelections(input: Selections): ResolvedSelections {
     const picks = walk(sel);
     exclusions = picks.flatMap((p) =>
       (p.option.excludes ?? []).map((x) => ({ ...x, byPath: p.path, byOptionId: p.option.id })),
-    );
+    ).concat(extra.filter((x) => picks.some((p) => p.path === x.byPath && p.option.id === x.byOptionId)));
     let changed = false;
     for (const x of exclusions) {
       const pick = picks.find((p) => p.path === x.path);

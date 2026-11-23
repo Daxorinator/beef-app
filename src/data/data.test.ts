@@ -18,7 +18,7 @@ function walkOptions(options: CutOption[], visit: (o: CutOption, path: string) =
 }
 
 const allProducts: ProductSpec[] = [];
-for (const r of REGIONS) walkOptions(r.options, (o) => allProducts.push(...(o.products ?? [])));
+for (const r of REGIONS) walkOptions(r.options, (o) => allProducts.push(...(o.products ?? []), ...(o.allocation?.uses.map((u) => u.product) ?? [])));
 
 const sourced: Sourced[] = [
   ...REGIONS.flatMap((r) => [r.meatPctOfCarcass, ...(r.bonePctOfCarcass ? [r.bonePctOfCarcass] : [])]),

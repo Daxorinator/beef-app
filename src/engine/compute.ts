@@ -6,12 +6,12 @@ import { PART_BY_ID } from '../data/parts';
 import { FREEZER_LITRES_PER_KG, DICED_LEAN_PCT, TRIM_POOL_LEAN_PCT } from '../data/model-constants';
 import { QPS_SPEC } from '../data/grading';
 import { inchLabel, STANDARD_STEAK_CM } from '../data/thickness';
-import { REGION_BY_ID, TRIM_POOL_PCT_OF_CARCASS } from '../data/regions';
-import type { Advisory, ButcherPrefs, MassBalance, ProductLine, ProductSpec } from '../model/types';
+import { REGION_BY_ID, REGIONS, TRIM_POOL_PCT_OF_CARCASS } from '../data/regions';
+import type { Advisory, Allocation, AllocationUse, ButcherPrefs, MassBalance, ProductLine, ProductSpec } from '../model/types';
 import { carcassAndLive, composition, effectiveGrade, type Composition, type Grade } from './carcass';
 import { matches } from './conditions';
 import { allPartInfo, partKg, type PartInfo } from './parts';
-import { optionsAt, resolveSelections, type ResolvedSelections } from './selections';
+import { optionsAt, resolveSelections, type ExtraExclusion, type ResolvedSelections } from './selections';
 import type { AppState } from './state';
 
 export interface Line extends ProductLine {
@@ -25,6 +25,8 @@ export interface Line extends ProductLine {
   weightOnly?: boolean;
   /** How the piece / steak size was derived (shown on hover). */
   sizeNote?: string;
+  /** How the butcher should cut it when it isn't a thickness (e.g. 'one rib bone each', '2-rib joints'). */
+  cutNote?: string;
   /** Roasts: people each joint feeds at the chosen grams per person. */
   feeds?: number;
   /** Roasts: too little meat for even one joint of the household size. */
@@ -42,7 +44,22 @@ export interface PartLine {
   note?: string;
 }
 
+export interface BalanceInfo {
+  path: string;
+  roastId: string;
+  steakId: string;
+  /** Most full joints the cut can make at the household's joint size. */
+  maxRoasts: number;
+  jointKg: number;
+  /** Steak weight if the whole cut went to steaks (kg). */
+  allSteaksKg: number;
+  /** The user's choice (clamped), or undefined for the default half-and-half. */
+  chosen?: number;
+}
+
 export interface EngineResult {
+  balances: BalanceInfo[];
+  allocations: AllocationInfo[];
   resolved: ResolvedSelections;
   grade: Grade;
   killOutPct: number;
@@ -98,6 +115,36 @@ export const steakScale = (carcassKg: number, refKg: number) => Math.pow(carcass
 /** Mass scaling of a whole muscle / piece measured on a reference carcass. */
 export const pieceScale = (carcassKg: number, refKg: number) => carcassKg / refKg;
 
+/** Items tied to anatomical units: one per unit (côte per rib), or joints made of whole units (2-rib roasts). */
+function sizeByUnits(line: Line, p: ProductSpec, units: number, sizing: 'one-per-unit' | 'joints-of-units', unit: [string, string], prefs: ButcherPrefs, wholeCarcassKg: number): void {
+  const w = line.weightKg;
+  line.thicknessCm = undefined;
+  if (sizing === 'one-per-unit') {
+    line.count = units;
+    line.eachKg = w / units;
+    line.perPack = 1;
+    line.packs = units;
+    // Implied thickness: the steak's weight over its weight per cm at this carcass size.
+    const perCm = p.gramsPerCm && p.sizeRef ? (p.gramsPerCm * steakScale(wholeCarcassKg, p.sizeRef.carcassKg)) / 1000 : undefined;
+    line.cutNote = `one ${unit[0]} bone each${perCm ? `, about ${inchLabel(Math.round(((w / units) / perCm) / (2.54 / 4)) * (2.54 / 4))} thick` : ''}`;
+    line.sizeNote = `One per ${unit[0]}: the thickness is the ${unit[0]} spacing`;
+    return;
+  }
+  const target = (prefs.familySize * prefs.roastGramsPerPerson * (p.boneFactor ?? 1)) / 1000;
+  const unitKg = w / units;
+  const perJoint = Math.min(units, Math.max(1, Math.round(target / unitKg)));
+  const joints = Math.max(1, Math.round(units / perJoint));
+  line.count = joints;
+  line.eachKg = w / joints;
+  line.perPack = 1;
+  line.packs = joints;
+  line.feeds = Math.max(1, Math.round((line.eachKg * 1000) / (p.boneFactor ?? 1) / prefs.roastGramsPerPerson));
+  line.undersized = w < target * 0.75;
+  const per = units / joints;
+  line.cutNote = `${Number.isInteger(per) ? per : `about ${per.toFixed(1)}`}-${unit[0]} joint${joints > 1 ? 's' : ''}`;
+  line.sizeNote = `${units} ${units === 1 ? unit[0] : unit[1]} on the bone, as ${joints} joint${joints > 1 ? 's' : ''} for ${prefs.familySize} people`;
+}
+
 function sizeProduct(line: Line, p: ProductSpec, wholeCarcassKg: number, prefs: ButcherPrefs): void {
   const w = line.weightKg;
   if (w <= 0) return;
@@ -143,6 +190,31 @@ function sizeProduct(line: Line, p: ProductSpec, wholeCarcassKg: number, prefs: 
   }
 }
 
+export interface AllocationInfo {
+  path: string;
+  allocation: Allocation;
+  /** Units available to this customer (all sides). */
+  totalUnits: number;
+  /** Units per use after clamping, including the remainder use. */
+  plan: Record<string, number>;
+}
+
+/** Units per use for this customer: the user's plan (or the defaults), clamped in order so they never exceed the total. */
+export function allocationPlan(al: Allocation, wanted: Record<string, number> | undefined, sides: number): { total: number; plan: Record<string, number> } {
+  const total = al.unitsPerSide * sides;
+  const plan: Record<string, number> = {};
+  let left = total;
+  for (const u of al.uses) {
+    if (u.id === al.remainder) continue;
+    const want = wanted ? (wanted[u.id] ?? 0) : (al.defaultsPerSide[u.id] ?? 0) * sides;
+    const n = Math.max(0, Math.min(left, Math.round(want)));
+    plan[u.id] = n;
+    left -= n;
+  }
+  plan[al.remainder] = left;
+  return { total, plan };
+}
+
 export function compute(state: AppState): EngineResult {
   const { animal: a, prefs } = state;
   const grade = effectiveGrade(a);
@@ -150,20 +222,61 @@ export function compute(state: AppState): EngineResult {
   const shareMult = a.share === 'half' ? 0.5 : 1;
   const carcassKg = wholeCarcassKg * shareMult;
   const comp = composition(grade, a.hangingDays);
-  const resolved = resolveSelections(state.selections);
+  const sides = a.share === 'half' ? 1 : 2;
+  // Exclusions from planner uses (e.g. any tomahawk rib) apply only when that planner option is chosen.
+  const extraExclusions: ExtraExclusion[] = [];
+  for (const region of REGIONS)
+    for (const o of region.options) {
+      if (!o.allocation) continue;
+      const { plan } = allocationPlan(o.allocation, state.allocations?.[region.id], sides);
+      for (const u of o.allocation.uses)
+        if ((plan[u.id] ?? 0) > 0) for (const x of u.excludes ?? []) extraExclusions.push({ ...x, byPath: region.id, byOptionId: o.id });
+    }
+  const resolved = resolveSelections(state.selections, extraExclusions);
 
   // ───── Region products ─────
   const lines: Line[] = [];
   let leftoverKg = 0;
   let boneInCutsKg = 0;
   let tibiaUsedKg = 0;
+  const balances: BalanceInfo[] = [];
+  const allocations: AllocationInfo[] = [];
   for (const leaf of resolved.leaves) {
     const regionMeat = (carcassKg * leaf.region.meatPctOfCarcass.value * comp.meatFactor) / 100;
     const leafMeat = regionMeat * leaf.share;
-    const products = leaf.option.products ?? [];
+    let products = leaf.option.products ?? [];
+    const al = leaf.option.allocation;
+    const sizingOf: Record<string, AllocationUse['sizing']> = {};
+    const unitsOf: Record<string, number> = {};
+    if (al) {
+      const { total, plan } = allocationPlan(al, state.allocations?.[leaf.path], sides);
+      allocations.push({ path: leaf.path, allocation: al, totalUnits: total, plan });
+      products = al.uses.filter((u) => plan[u.id] > 0).map((u) => {
+        sizingOf[u.product.id] = u.sizing;
+        unitsOf[u.product.id] = plan[u.id];
+        return { ...u.product, fraction: (u.product.fraction * plan[u.id]) / total };
+      });
+    }
+    const bal = leaf.option.balance;
+    if (bal) {
+      // Data fractions are for a 50:50 split; rescale to the chosen number of roasts.
+      const roast = products.find((p) => p.id === bal.roastId)!;
+      const jointKg = (prefs.familySize * prefs.roastGramsPerPerson * (roast.boneFactor ?? 1)) / 1000;
+      const allRoastKg = leafMeat * roast.fraction * 2 * (roast.boneFactor ?? 1);
+      const maxRoasts = Math.max(0, Math.round(allRoastKg / jointKg));
+      const wanted = state.roastCounts?.[leaf.path];
+      const roasts = wanted === undefined ? undefined : Math.min(Math.max(0, Math.round(wanted)), maxRoasts);
+      // At the maximum the whole cut goes to roasts (joints resized slightly to fit).
+      const roastShare = roasts === undefined ? 0.5 : roasts === 0 ? 0 : roasts === maxRoasts ? 1 : Math.min(1, (roasts * jointKg) / allRoastKg);
+      products = products.map((p) => ({ ...p, fraction: p.fraction * 2 * (p.id === bal.roastId ? roastShare : 1 - roastShare) }));
+      const steakSpec = products.find((p) => p.id === bal.steakId)!;
+      const allSteaksKg = leafMeat * (leaf.option.products!.find((p) => p.id === bal.steakId)!.fraction * 2) * (steakSpec.boneFactor ?? 1);
+      balances.push({ path: leaf.path, roastId: bal.roastId, steakId: bal.steakId, maxRoasts, jointKg, allSteaksKg, chosen: roasts });
+    }
     const used = products.reduce((s, p) => s + p.fraction, 0);
     leftoverKg += leafMeat * (1 - used);
     for (const p of products) {
+      if (p.fraction <= 0) continue;
       const lean = leafMeat * p.fraction;
       const bone = lean * ((p.boneFactor ?? 1) - 1);
       boneInCutsKg += bone;
@@ -182,7 +295,9 @@ export function compute(state: AppState): EngineResult {
         boneKg: bone,
         spec: p,
       };
-      sizeProduct(line, p, wholeCarcassKg, prefs);
+      const sizing = sizingOf[p.id] ?? 'standard';
+      if (sizing === 'standard') sizeProduct(line, p, wholeCarcassKg, prefs);
+      else sizeByUnits(line, p, unitsOf[p.id], sizing, al!.unit, prefs, wholeCarcassKg);
       lines.push(line);
     }
   }
@@ -315,6 +430,8 @@ export function compute(state: AppState): EngineResult {
   const freezerBoneLitres = boneReturnedKg * FREEZER_LITRES_PER_KG.value;
 
   return {
+    balances,
+    allocations,
     resolved,
     grade,
     killOutPct: killOut,

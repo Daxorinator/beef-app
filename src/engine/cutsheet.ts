@@ -15,8 +15,9 @@ export const SEX_LABEL = { heifer: 'Heifer', steer: 'Steer', bull: 'Bull', cow: 
 function describeLine(l: Line): string {
   const bits: string[] = [];
   if (l.thicknessCm) bits.push(`${inchLabel(l.thicknessCm)} thick`);
+  if (l.cutNote) bits.push(l.cutNote);
   if (l.kind === 'steak' && l.perPack) bits.push(`${l.perPack} per pack`);
-  if ((l.kind === 'roast' || l.kind === 'cured') && l.eachKg) bits.push(`joints of about ${kg(l.eachKg)}${l.feeds ? `, each feeds ${l.feeds}` : ''}`);
+  if ((l.kind === 'roast' || l.kind === 'cured') && l.eachKg && !l.cutNote) bits.push(`joints of about ${kg(l.eachKg)}${l.feeds ? `, each feeds ${l.feeds}` : ''}`);
   if (l.kind === 'diced') bits.push('diced, bagged');
   const each = l.eachKg !== undefined ? (l.eachKg < 1 ? `${Math.round(l.eachKg * 1000)} g` : kg(l.eachKg)) : '';
   const est = l.count && !l.weightOnly ? ` (≈ ${l.count} × ${each} = ${kg(l.weightKg)})` : ` (≈ ${kg(l.weightKg)}, by weight)`;

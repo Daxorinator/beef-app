@@ -16,6 +16,8 @@ const base = (animal: Partial<Animal> = {}, rest: Partial<AppState> = {}): AppSt
   selections: {},
   prefs: DEFAULT_PREFS,
   partRequests: DEFAULT_PARTS,
+  roastCounts: {},
+  allocations: {},
   ...rest,
 });
 
@@ -336,5 +338,72 @@ describe('thickness in inches', () => {
       for (const o of region.options)
         for (const p of [...(o.products ?? []), ...(o.parts ?? []).flatMap((pt) => pt.options.flatMap((oo) => oo.products ?? []))])
           if (p.defaultThicknessCm !== undefined && p.allowedThicknessCm) expect(p.allowedThicknessCm, p.id).toContain(p.defaultThicknessCm);
+  });
+});
+
+describe('roast / steak balance (sirloin, topside)', () => {
+  const run = (n: number | undefined, share: 'whole' | 'half' = 'whole') =>
+    compute(base({ share }, { selections: { topside: 'split' }, roastCounts: n === undefined ? {} : { topside: n } }));
+  const line = (r: ReturnType<typeof run>, id: string) => r.lines.find((l) => l.productId === id);
+  it('the chosen number of roasts is what you get, and the rest becomes steaks', () => {
+    expect(line(run(2), 'topside-roast-half')!.count).toBe(2);
+    expect(line(run(3), 'topside-roast-half')!.count).toBe(3);
+    expect(line(run(2), 'topside-round-steak-half')!.count!).toBeGreaterThan(line(run(3), 'topside-round-steak-half')!.count!);
+  });
+  it('0 roasts gives all steaks; max roasts gives no steaks', () => {
+    expect(line(run(0), 'topside-roast-half')).toBeUndefined();
+    const all = compute(base({}, { selections: { topside: 'round-steak' } })).lines.find((l) => l.productId === 'topside-round-steak')!;
+    // data stores the half-split share rounded (0.365 vs 0.729 / 2)
+    expect(Math.abs(line(run(0), 'topside-round-steak-half')!.weightKg / all.weightKg - 1)).toBeLessThan(0.005);
+    const max = run(99);
+    expect(line(max, 'topside-round-steak-half')).toBeUndefined();
+    expect(line(max, 'topside-roast-half')!.count).toBe(max.balances[0].maxRoasts);
+  });
+  it('mass closes for any choice', () => {
+    for (const n of [undefined, 0, 1, 3, 99]) {
+      const b = run(n, 'half').balance;
+      expect(b.meatKg + b.fatPoolKg + b.marrowKg + b.soupBoneKg + b.hangingLossKg + b.cuttingLossKg + b.butcherTrimKg).toBeCloseTo(b.carcassKg, 6);
+    }
+  });
+  it('works on a part (sirloin)', () => {
+    const r = compute(base({}, { selections: { loin: 'separate', 'loin/striploin': 'split' }, roastCounts: { 'loin/striploin': 1 } }));
+    expect(r.lines.find((l) => l.productId === 'sirloin-roast-half')!.count).toBe(1);
+  });
+});
+
+describe('fore rib, rib by rib', () => {
+  const run = (plan: Record<string, number> | undefined, share: 'whole' | 'half' = 'whole', extra: Record<string, string> = {}) =>
+    compute(base({ share }, { selections: { 'fore-rib': 'mix', ...extra }, allocations: plan ? { 'fore-rib': plan } : {} }));
+  const line = (r: ReturnType<typeof run>, id: string) => r.lines.find((l) => l.productId === id);
+  it('defaults: per side 2 ribs roasted on the bone, 1 côte, 1 rib of steaks', () => {
+    const r = run(undefined);
+    expect(r.allocations[0].plan).toEqual({ 'roast-on-bone': 4, rolled: 0, cote: 2, tomahawk: 0, steaks: 2 });
+    expect(line(r, 'mix-cote')!.count).toBe(2);
+    expect(line(r, 'mix-cote')!.thicknessCm).toBeUndefined();
+  });
+  it('the plan never exceeds the ribs available (8 whole, 4 half)', () => {
+    const r = run({ 'roast-on-bone': 3, cote: 3, tomahawk: 3 }, 'half');
+    expect(r.allocations[0].totalUnits).toBe(4);
+    expect(Object.values(r.allocations[0].plan).reduce((s, n) => s + n, 0)).toBe(4);
+    expect(r.allocations[0].plan).toMatchObject({ 'roast-on-bone': 3, cote: 1, tomahawk: 0, steaks: 0 });
+  });
+  it('all ribs to steaks equals the plain rib-steak option', () => {
+    const all = compute(base({}, { selections: { 'fore-rib': 'ribeye' } })).lines.find((l) => l.productId === 'ribeye-steak')!;
+    expect(line(run({}), 'mix-ribeye')!.weightKg).toBeCloseTo(all.weightKg, 9);
+  });
+  it('all ribs on the bone equals the plain on-the-bone option', () => {
+    const all = compute(base({}, { selections: { 'fore-rib': 'on-bone' } })).lines.find((l) => l.productId === 'rib-roast-bone-in')!;
+    expect(line(run({ 'roast-on-bone': 8 }), 'mix-rib-roast')!.weightKg).toBeCloseTo(all.weightKg, 9);
+  });
+  it('a tomahawk rib rules out bone-in short ribs; none leaves them allowed', () => {
+    expect(run({ tomahawk: 1 }, 'whole', { plate: 'short-ribs' }).resolved.selections.plate).toBe('mince');
+    expect(run({ cote: 2 }, 'whole', { plate: 'short-ribs' }).resolved.selections.plate).toBe('short-ribs');
+  });
+  it('joints are made of whole ribs and mass closes', () => {
+    const r = run({ 'roast-on-bone': 4, rolled: 2, cote: 1, tomahawk: 1 });
+    const roast = line(r, 'mix-rib-roast')!;
+    expect(roast.cutNote).toMatch(/-rib joint/);
+    const b = r.balance;
+    expect(b.meatKg + b.fatPoolKg + b.marrowKg + b.soupBoneKg + b.hangingLossKg + b.cuttingLossKg + b.butcherTrimKg).toBeCloseTo(b.carcassKg, 6);
   });
 });

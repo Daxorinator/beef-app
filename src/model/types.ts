@@ -166,6 +166,42 @@ export interface CutOption {
    * `path` uses the Selections key format ("plate", "loin/striploin").
    */
   excludes?: { path: string; optionIds: string[]; reason: string }[];
+  /**
+   * Roast/steak balance: the user picks how many roasts. The two products' fractions are given for a 50:50 split
+   * of the cut; the engine rescales them to the chosen share (all roast … all steaks).
+   */
+  balance?: { roastId: string; steakId: string };
+  /**
+   * Unit-by-unit planner (e.g. the fore rib, rib by rib). Each use's product fraction is what it would yield if the
+   * whole cut went to that use; the engine gives each use the share of units the user allots. Unallotted units go to
+   * the `remainder` use. When set, `products` is empty.
+   */
+  allocation?: Allocation;
+}
+
+export interface AllocationUse {
+  id: string;
+  label: string;
+  product: ProductSpec;
+  /**
+   * 'one-per-unit': one item per unit, e.g. a côte de boeuf per rib bone (count fixed by anatomy, no thickness).
+   * 'joints-of-units': joints made of whole units (e.g. 2-rib roasts), sized for the household.
+   * 'standard': sized like any other product (steaks by thickness, joints by household).
+   */
+  sizing: 'one-per-unit' | 'joints-of-units' | 'standard';
+  /** Choosing any of this use rules these options out elsewhere (e.g. tomahawk → no bone-in short ribs). */
+  excludes?: { path: string; optionIds: string[]; reason: string }[];
+}
+
+export interface Allocation {
+  /** Singular / plural unit names, e.g. rib / ribs. */
+  unit: [string, string];
+  unitsPerSide: number;
+  uses: AllocationUse[];
+  /** Use id that takes every unit not allotted. */
+  remainder: string;
+  /** Default units per side for each non-remainder use. */
+  defaultsPerSide: Record<string, number>;
 }
 
 export interface RegionPart {

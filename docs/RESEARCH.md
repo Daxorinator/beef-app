@@ -488,6 +488,7 @@ Sources: Irish Butchers' Guild <https://irishbutchersguild.com/beef/>, grassfed.
 - T-bone / porterhouse **vs** separate sirloin (striploin) + fillet steaks or roasts. **[S]** "Choosing T-bones means sacrificing sirloin steaks."
 - Fore rib: on-the-bone roast **vs** côte de boeuf / tomahawk **vs** boned ribeye steaks or ribeye roast **vs** rolled rib.
 - Wing rib (bone-in sirloin) **vs** boneless striploin.
+- **Mixing within a cut (implemented 2026-11-23):** the fore rib is cut one rib at a time, so each of ribs 7–10 (4 per side, 8 per animal) can go a different way: on-the-bone roast (joints of whole ribs), rolled roast, côte de boeuf or tomahawk (one per rib, thickness = rib spacing, about 1½"), or boned for rib steaks. Any tomahawk rib still rules out bone-in short ribs. Sirloin and topside are cut along their length, so they mix by number of joints, with the rest as steaks. **[E]** (standard butchery practice)
 - Rump: picanha off first (then rump steaks from the rest) **vs** whole rump steaks or roast. Tri-tip **vs** left in the rump or minced.
 - Feather: feather blade (braise) **vs** flat iron steaks.
 - Chuck & blade: housekeeper's cut roast **vs** braising steak **vs** diced **vs** mince. Denver steaks come out of the chuck roll.
