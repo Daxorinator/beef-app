@@ -29,9 +29,6 @@ export function sanitize(x: unknown): AppState | undefined {
   if (!STEAK_CM.includes(prefs.steakThicknessCm)) prefs.steakThicknessCm = DEFAULT_PREFS.steakThicknessCm;
   const selections = o.selections && typeof o.selections === 'object' ? o.selections : {};
   const partRequests = Array.isArray(o.partRequests) ? o.partRequests.filter((r) => r && typeof r.partId === 'string') : DEFAULT_PARTS;
-  const roastCounts: Record<string, number> = {};
-  if (o.roastCounts && typeof o.roastCounts === 'object')
-    for (const [k, v] of Object.entries(o.roastCounts)) if (typeof v === 'number' && v >= 0 && v < 100) roastCounts[k] = Math.round(v);
   const allocations: Record<string, Record<string, number>> = {};
   if (o.allocations && typeof o.allocations === 'object')
     for (const [path, plan] of Object.entries(o.allocations)) {
@@ -39,7 +36,7 @@ export function sanitize(x: unknown): AppState | undefined {
       allocations[path] = {};
       for (const [k, v] of Object.entries(plan)) if (typeof v === 'number' && v >= 0 && v < 100) allocations[path][k] = Math.round(v);
     }
-  return { animal, prefs, selections, partRequests, roastCounts, allocations };
+  return { animal, prefs, selections, partRequests, allocations };
 }
 
 export function encodeState(s: AppState): string {

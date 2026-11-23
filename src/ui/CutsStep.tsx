@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { PRESETS, type Preset } from '../data/presets';
 import { REGION_BY_ID, REGIONS } from '../data/regions';
 import type { LoinPlan } from '../engine/loin';
-import { compute, type AllocationInfo, type BalanceInfo, type EngineResult, type Line } from '../engine/compute';
+import { compute, type AllocationInfo, type EngineResult, type JointPlanInfo, type Line } from '../engine/compute';
 import { exclusionReason, optionsAt } from '../engine/selections';
 import type { AppState } from '../engine/state';
 import type { CutOption, Selections } from '../model/types';
@@ -18,7 +18,6 @@ interface Props {
   onRegion: (id: string) => void;
   onSelections: (s: Selections) => void;
   onThickness: (productId: string, cm: number) => void;
-  onRoastCount: (path: string, roasts: number) => void;
   onAllocation: (path: string, plan: Record<string, number>) => void;
   onPreset: (p: Preset) => void;
 }
@@ -202,38 +201,44 @@ function LoinPicker({ plan, lines, onChange }: { plan: LoinPlan; lines: Line[]; 
   );
 }
 
-function BalancePicker({ b, lines, familySize, onChange }: { b: BalanceInfo; lines: Line[]; familySize: number; onChange: (n: number) => void }) {
-  const roast = lines.find((l) => l.productId === b.roastId);
-  const steak = lines.find((l) => l.productId === b.steakId);
-  const roasts = roast?.count ?? 0;
-  // Steak size doesn't depend on the mix; take it from the line, or from the joint-free case.
-  const steakEach = steak?.eachKg ?? 0;
+function JointPlanPicker({ info, lines, familySize, onChange }: { info: JointPlanInfo; lines: Line[]; familySize: number; onChange: (req: Record<string, number>) => void }) {
+  const jp = info.plan;
+  const roastLine = lines.find((l) => l.productId === jp.roast.id && l.path === info.path);
+  const rest = jp.rests[info.restIdx];
+  const restLine = rest.product ? lines.find((l) => l.productId === rest.product!.id && l.path === info.path) : undefined;
+  const roasts = roastLine?.count ?? 0;
+  const set = (patch: { roasts?: number; rest?: number }) => onChange({ roasts, rest: info.restIdx, ...patch });
+  const steakEach = restLine?.eachKg ?? 0;
   return (
-    <div className="part balance">
-      <h3>Roasts or steaks?</h3>
+    <div className="part allocation">
       <div className="balance-row">
-        <span>{roast?.name ?? 'Roasts'}</span>
-        <div className="stepper-ctl" role="group" aria-label="Number of roasts">
-          <button aria-label="Fewer roasts" disabled={roasts <= 0} onClick={() => onChange(roasts - 1)}>−</button>
-          <output aria-live="polite">{roasts}</output>
-          <button aria-label="More roasts" disabled={roasts >= b.maxRoasts} onClick={() => onChange(roasts + 1)}>+</button>
-        </div>
+        <span className="alloc-label">
+          {jp.roast.name} joints
+          <span className="hint">{roasts ? `${roasts} × ${weight(roastLine!.eachKg!)}${roastLine!.feeds ? `, feeds ${roastLine!.feeds}` : ''}` : `about ${weight(info.jointKg)} each for ${familySize}`} · up to {info.maxRoasts}</span>
+        </span>
+        <span className="stepper-ctl" role="group" aria-label={`${jp.roast.name} joints`}>
+          <button aria-label={`Fewer: ${jp.roast.name}`} disabled={roasts <= 0} onClick={() => set({ roasts: roasts - 1 })}>−</button>
+          <output>{roasts}</output>
+          <button aria-label={`More: ${jp.roast.name}`} disabled={roasts >= info.maxRoasts} onClick={() => set({ roasts: roasts + 1 })}>+</button>
+        </span>
       </div>
-      <input type="range" min={0} max={b.maxRoasts} step={1} value={roasts} aria-label="Roasts" onChange={(e) => onChange(Number(e.target.value))} />
-      <p className="hint">
-        {roasts} joint{roasts === 1 ? '' : 's'} of about {weight(b.jointKg)} (for {familySize}) · the rest as {steak?.count ?? 0} {steak ? steak.name.toLowerCase() : 'steaks'}
-        {steak?.eachKg ? ` (~${weight(steak.eachKg)} each)` : ''}. Up to {b.maxRoasts} joints from this cut.
-      </p>
-      {steakEach > 0 && b.maxRoasts > 0 && (
+      <div className="quick-fill" role="radiogroup" aria-label="The rest as">
+        <span className="opt">{info.roastShare >= 1 ? 'If fewer joints, the rest as:' : 'The rest as:'}</span>
+        {jp.rests.map((r, i) => (
+          <button key={r.id} role="radio" aria-checked={i === info.restIdx} className={`chip${i === info.restIdx ? ' on' : ''}`} onClick={() => set({ rest: i })}>{r.short}</button>
+        ))}
+      </div>
+      {info.roastShare < 1 && (
         <p className="hint">
-          Each joint costs about {(b.allSteaksKg / steakEach / b.maxRoasts).toFixed(1)} steaks: a roast uses the whole cut, while only the best muscle is cut into steaks (the rest goes to mince).
+          The rest: {restLine ? `${restLine.count ? `${restLine.count} × ${weight(restLine.eachKg!)}` : weight(restLine.weightKg)} ${restLine.name.toLowerCase()}` : 'to mince'}.
+          {steakEach > 0 && info.maxRoasts > 0 && restLine?.kind === 'steak' && ` Each joint costs about ${(info.allRestKg / steakEach / info.maxRoasts).toFixed(1)} steaks (a joint uses the whole muscle; steaks are trimmed harder).`}
         </p>
       )}
     </div>
   );
 }
 
-export function CutsStep({ state, result, region: regionId, onRegion, onSelections, onThickness, onRoastCount, onAllocation, onPreset }: Props) {
+export function CutsStep({ state, result, region: regionId, onRegion, onSelections, onThickness, onAllocation, onPreset }: Props) {
   const region = REGION_BY_ID[regionId];
   const sel = result.resolved.selections;
   const top = sel[region.id];
@@ -292,12 +297,18 @@ export function CutsStep({ state, result, region: regionId, onRegion, onSelectio
             </>
           )}
 
-          {topOpt.parts?.map((part) => (
-            <div key={part.id} className="part">
-              <h3>{part.name} <span className="opt">{Math.round(part.share * 100)} % of the {region.name.toLowerCase()}</span></h3>
-              <OptionList state={state} path={`${region.id}/${part.id}`} options={part.options} current={sel[`${region.id}/${part.id}`]} result={result} onPick={(id) => pick(`${region.id}/${part.id}`, id)} />
-            </div>
-          ))}
+          {topOpt.parts?.map((part) => {
+            const path = `${region.id}/${part.id}`;
+            return (
+              <div key={part.id} className="part">
+                <h3>{part.name} <span className="opt">{Math.round(part.share * 100)} % of the {region.name.toLowerCase()}</span></h3>
+                {part.options.length > 1 && <OptionList state={state} path={path} options={part.options} current={sel[path]} result={result} onPick={(id) => pick(path, id)} />}
+                {result.jointPlans.filter((j) => j.path === path).map((j) => (
+                  <JointPlanPicker key={j.path} info={j} lines={regionLines} familySize={state.prefs.familySize} onChange={(req) => onAllocation(j.path, req)} />
+                ))}
+              </div>
+            );
+          })}
 
           {result.loinPlans.filter((x) => x.path === region.id).map((x) => (
             <LoinPicker key={x.path} plan={x.plan} lines={regionLines} onChange={(req) => onAllocation(x.path, req)} />
@@ -307,8 +318,8 @@ export function CutsStep({ state, result, region: regionId, onRegion, onSelectio
             <AllocationPicker key={x.path} info={x} lines={regionLines} sides={state.animal.share === 'half' ? 1 : 2} onChange={(plan) => onAllocation(x.path, plan)} />
           ))}
 
-          {result.balances.filter((b) => b.path === region.id || b.path.startsWith(`${region.id}/`)).map((b) => (
-            <BalancePicker key={b.path} b={b} lines={regionLines} familySize={state.prefs.familySize} onChange={(n) => onRoastCount(b.path, n)} />
+          {result.jointPlans.filter((j) => j.path === region.id).map((j) => (
+            <JointPlanPicker key={j.path} info={j} lines={regionLines} familySize={state.prefs.familySize} onChange={(req) => onAllocation(j.path, req)} />
           ))}
 
           {regionLines.some((l) => l.spec?.allowedThicknessCm) && (
