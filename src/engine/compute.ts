@@ -8,7 +8,7 @@ import { QPS_SPEC } from '../data/grading';
 import { LOIN_PRODUCTS } from '../data/loin';
 import { inchLabel, STANDARD_STEAK_CM } from '../data/thickness';
 import { REGION_BY_ID, REGIONS, TRIM_POOL_PCT_OF_CARCASS } from '../data/regions';
-import type { Advisory, Allocation, AllocationUse, ButcherPrefs, MassBalance, ProductLine, ProductSpec } from '../model/types';
+import type { Advisory, Allocation, AllocationUse, JointPlan, ButcherPrefs, MassBalance, ProductLine, ProductSpec } from '../model/types';
 import { carcassAndLive, composition, effectiveGrade, type Composition, type Grade } from './carcass';
 import { matches } from './conditions';
 import { allPartInfo, partKg, type PartInfo } from './parts';
@@ -46,22 +46,22 @@ export interface PartLine {
   note?: string;
 }
 
-export interface BalanceInfo {
+export interface JointPlanInfo {
   path: string;
-  roastId: string;
-  steakId: string;
-  /** Most full joints the cut can make at the household's joint size. */
+  plan: JointPlan;
+  /** Most full joints the muscle can make at the household's joint size. */
   maxRoasts: number;
   jointKg: number;
-  /** Steak weight if the whole cut went to steaks (kg). */
-  allSteaksKg: number;
-  /** The user's choice (clamped), or undefined for the default half-and-half. */
-  chosen?: number;
+  restIdx: number;
+  /** Weight if the whole muscle went to the chosen rest use (kg). */
+  allRestKg: number;
+  roastShare: number;
 }
+
 
 export interface EngineResult {
   loinPlans: { path: string; plan: LoinPlan }[];
-  balances: BalanceInfo[];
+  jointPlans: JointPlanInfo[];
   allocations: AllocationInfo[];
   resolved: ResolvedSelections;
   grade: Grade;
@@ -254,7 +254,7 @@ export function compute(state: AppState): EngineResult {
   let leftoverKg = 0;
   let boneInCutsKg = 0;
   let tibiaUsedKg = 0;
-  const balances: BalanceInfo[] = [];
+  const jointPlans: JointPlanInfo[] = [];
   const allocations: AllocationInfo[] = [];
   const loinPlans: { path: string; plan: LoinPlan }[] = [];
   for (const leaf of resolved.leaves) {
@@ -293,21 +293,21 @@ export function compute(state: AppState): EngineResult {
         return { ...u.product, fraction: (u.product.fraction * plan[u.id]) / total };
       });
     }
-    const bal = leaf.option.balance;
-    if (bal) {
-      // Data fractions are for a 50:50 split; rescale to the chosen number of roasts.
-      const roast = products.find((p) => p.id === bal.roastId)!;
+    const jp = leaf.option.jointPlan;
+    if (jp) {
+      const req = state.allocations?.[leaf.path];
+      const roast = jp.roast;
       const jointKg = (prefs.familySize * prefs.roastGramsPerPerson * (roast.boneFactor ?? 1)) / 1000;
-      const allRoastKg = leafMeat * roast.fraction * 2 * (roast.boneFactor ?? 1);
+      const allRoastKg = leafMeat * roast.fraction * (roast.boneFactor ?? 1);
       const maxRoasts = Math.max(0, Math.round(allRoastKg / jointKg));
-      const wanted = state.roastCounts?.[leaf.path];
-      const roasts = wanted === undefined ? undefined : Math.min(Math.max(0, Math.round(wanted)), maxRoasts);
-      // At the maximum the whole cut goes to roasts (joints resized slightly to fit).
-      const roastShare = roasts === undefined ? 0.5 : roasts === 0 ? 0 : roasts === maxRoasts ? 1 : Math.min(1, (roasts * jointKg) / allRoastKg);
-      products = products.map((p) => ({ ...p, fraction: p.fraction * 2 * (p.id === bal.roastId ? roastShare : 1 - roastShare) }));
-      const steakSpec = products.find((p) => p.id === bal.steakId)!;
-      const allSteaksKg = leafMeat * (leaf.option.products!.find((p) => p.id === bal.steakId)!.fraction * 2) * (steakSpec.boneFactor ?? 1);
-      balances.push({ path: leaf.path, roastId: bal.roastId, steakId: bal.steakId, maxRoasts, jointKg, allSteaksKg, chosen: roasts });
+      const roasts = req?.roasts === undefined ? undefined : Math.min(Math.max(0, Math.round(req.roasts)), maxRoasts);
+      // At the maximum the whole muscle goes to joints (resized slightly to fit).
+      const roastShare = roasts === undefined ? jp.defaultRoastShare : roasts === 0 ? 0 : roasts === maxRoasts ? 1 : Math.min(1, (roasts * jointKg) / allRoastKg);
+      const restIdx = req?.rest !== undefined && jp.rests[req.rest] ? req.rest : jp.rests.findIndex((r) => r.id === jp.defaultRest);
+      const rest = jp.rests[restIdx];
+      products = [{ ...roast, fraction: roast.fraction * roastShare }, ...(rest.product ? [{ ...rest.product, fraction: rest.product.fraction * (1 - roastShare) }] : [])];
+      const allRestKg = rest.product ? leafMeat * rest.product.fraction * (rest.product.boneFactor ?? 1) : 0;
+      jointPlans.push({ path: leaf.path, plan: jp, maxRoasts, jointKg, restIdx, allRestKg, roastShare });
     }
     const used = products.reduce((s, p) => s + p.fraction, 0);
     leftoverKg += leafMeat * (1 - used);
@@ -473,7 +473,7 @@ export function compute(state: AppState): EngineResult {
 
   return {
     loinPlans,
-    balances,
+    jointPlans,
     allocations,
     resolved,
     grade,

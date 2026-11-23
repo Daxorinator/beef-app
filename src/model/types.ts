@@ -168,11 +168,8 @@ export interface CutOption {
    * `path` uses the Selections key format ("plate", "loin/striploin").
    */
   excludes?: { path: string; optionIds: string[]; reason: string }[];
-  /**
-   * Roast/steak balance: the user picks how many roasts. The two products' fractions are given for a 50:50 split
-   * of the cut; the engine rescales them to the chosen share (all roast … all steaks).
-   */
-  balance?: { roastId: string; steakId: string };
+  /** Joints + the rest: the user picks how many joints, and what the rest of the muscle becomes. `products` is empty. */
+  jointPlan?: JointPlan;
   /**
    * Unit-by-unit planner (e.g. the fore rib, rib by rib). Each use's product fraction is what it would yield if the
    * whole cut went to that use; the engine gives each use the share of units the user allots. Unallotted units go to
@@ -181,6 +178,16 @@ export interface CutOption {
   allocation?: Allocation;
   /** The loin planner (T-bones, fillets, sirloin); see engine/loin.ts. When set, `products` is empty. */
   loinPlanner?: boolean;
+}
+
+export interface JointPlan {
+  /** Fraction = yield if the whole muscle went to joints. */
+  roast: ProductSpec;
+  /** What the rest can become; fraction = yield if the whole muscle went to it. No product = mince/trim. */
+  rests: { id: string; short: string; product?: ProductSpec }[];
+  /** Share of the muscle in joints when the user hasn't chosen (0 … 1). */
+  defaultRoastShare: number;
+  defaultRest: string;
 }
 
 export interface AllocationUse {

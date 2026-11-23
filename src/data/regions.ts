@@ -105,30 +105,60 @@ export const REGIONS: Region[] = [
     meatPctOfCarcass: ahdb(6.74, 'Chuck roll 4.75 + blade 0.99 + underblade 0.72 + underblade fillet 0.28 (10.21 kg per side)'),
     description:
       "The top of the shoulder in front of the fore rib. In Ireland the chuck-eye side is sold as housekeeper's cut (top rib), a classic pot roast. The chuck roll also gives Denver steaks.",
-    defaultOption: 'housekeepers',
+    defaultOption: 'muscles',
     diagramIds: ['chuck'],
     options: [
       {
-        id: 'housekeepers',
-        label: "Housekeeper's cut roasts + braising steak",
-        description: 'The Denver muscle goes to mince with this option.',
-        products: [
-          { id: 'housekeepers-cut', name: "Housekeeper's cut (top rib) roast", kind: 'roast', fraction: 0.307, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB chuck-eye centre cut 2.76 + rib-eye fillet 0.38 of 10.21 kg' }, cookingId: 'pot-roast' },
-          steak({ id: 'chuck-braising-steak', name: 'Braising steak (chuck)', fraction: 0.461, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB remaining chuck roll 1.69 + blade 1.50 + underblade 1.09 + underblade fillet 0.43 of 10.21 kg' }, ...usdaSteak(369, 'shoulder pot roast or steak, boneless'), cookingId: 'braise' }),
+        id: 'muscles',
+        label: 'Muscle by muscle',
+        parts: [
+          {
+            id: 'denver',
+            name: 'Denver (chuck roll)',
+            share: 2.36 / 10.21,
+            defaultOption: 'steaks',
+            options: [
+              { id: 'steaks', label: 'Denver steaks', products: [steak({ id: 'denver-steak', name: 'Denver steak', fraction: 1, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB Denver muscle 2.36 of 10.21 kg, cut whole into steaks' }, ...usdaSteak(473, 'under blade center steak, Denver Cut'), cookingId: 'flash-steak' })] },
+              { id: 'braising', label: 'Braising steak', products: [steak({ id: 'denver-braising', name: 'Braising steak (Denver)', fraction: 1, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB Denver muscle' }, ...usdaSteak(369, 'shoulder pot roast or steak, boneless'), cookingId: 'braise' })] },
+              toMince(),
+            ],
+          },
+          {
+            id: 'eye',
+            name: "Chuck eye (housekeeper's cut)",
+            share: 3.14 / 10.21,
+            defaultOption: 'plan',
+            options: [
+              {
+                id: 'plan',
+                label: 'Joints + the rest',
+                products: [],
+                jointPlan: {
+                  roast: { id: 'housekeepers-cut', name: "Housekeeper's cut (top rib) roast", kind: 'roast', fraction: 1, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB chuck-eye centre cut 2.76 + rib-eye fillet 0.38 of 10.21 kg, as joints' }, cookingId: 'pot-roast' },
+                  rests: [
+                    { id: 'braising', short: 'Braising steak', product: steak({ id: 'chuck-eye-braising', name: 'Braising steak (chuck eye)', fraction: 1, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB chuck eye, sliced' }, ...usdaSteak(369, 'shoulder pot roast or steak, boneless'), cookingId: 'braise' }) },
+                    { id: 'diced', short: 'Diced', product: { id: 'chuck-eye-diced', name: 'Diced chuck', kind: 'diced', fraction: 0.95, fractionRef: F.dice95, cookingId: 'stew' } },
+                    { id: 'mince', short: 'Mince' },
+                  ],
+                  defaultRoastShare: 1,
+                  defaultRest: 'braising',
+                },
+              },
+            ],
+          },
+          {
+            id: 'rest',
+            name: 'Blade & underblade',
+            share: 4.71 / 10.21,
+            defaultOption: 'braising',
+            options: [
+              { id: 'braising', label: 'Braising steak', products: [steak({ id: 'chuck-braising-steak', name: 'Braising steak (chuck)', fraction: 1, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB remaining chuck roll 1.69 + blade 1.50 + underblade 1.09 + underblade fillet 0.43 of 10.21 kg' }, ...usdaSteak(369, 'shoulder pot roast or steak, boneless'), cookingId: 'braise' })] },
+              { id: 'diced', label: 'Diced stewing beef', products: [{ id: 'chuck-diced', name: 'Diced chuck steak', kind: 'diced', fraction: 0.95, fractionRef: F.dice95, cookingId: 'stew' }] },
+              toMince(),
+            ],
+          },
         ],
       },
-      {
-        id: 'denver',
-        label: "Denver steaks + housekeeper's cut + braising steak",
-        products: [
-          steak({ id: 'denver-steak', name: 'Denver steak', fraction: 0.231, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB Denver muscle 2.36 of 10.21 kg' }, ...usdaSteak(473, 'under blade center steak, Denver Cut'), cookingId: 'flash-steak' }),
-          { id: 'housekeepers-cut-d', name: "Housekeeper's cut (top rib) roast", kind: 'roast', fraction: 0.307, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB chuck-eye centre cut + rib-eye fillet' }, cookingId: 'pot-roast' },
-          steak({ id: 'chuck-braising-steak-d', name: 'Braising steak (chuck)', fraction: 0.461, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB remaining chuck muscles' }, ...usdaSteak(369, 'shoulder pot roast or steak, boneless'), cookingId: 'braise' }),
-        ],
-      },
-      { id: 'braising', label: 'All braising / chuck steak', products: [steak({ id: 'chuck-steak', name: 'Chuck / braising steak', fraction: 0.768, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: "AHDB chuck muscles: housekeeper's cut 3.14 + remaining chuck roll, blade and underblade 4.71 of 10.21 kg" }, ...usdaSteak(369, 'shoulder pot roast or steak, boneless'), cookingId: 'braise' })] },
-      { id: 'diced', label: 'Diced chuck (stewing)', products: [{ id: 'chuck-diced', name: 'Diced chuck steak', kind: 'diced', fraction: 0.95, fractionRef: F.dice95, cookingId: 'stew' }] },
-      toMince(),
     ],
   },
   {
@@ -338,23 +368,25 @@ export const REGIONS: Region[] = [
     quarter: 'hind',
     meatPctOfCarcass: ahdb(6.53, '9.89 kg per side'),
     description: 'The inside of the hind leg, "the most tender part of the round". Lean roasting joints (Irish round roast), round steak, minute steak or stir-fry.',
-    defaultOption: 'split',
+    defaultOption: 'plan',
     diagramIds: ['topside'],
     options: [
-      { id: 'roasts', label: 'Round roasts', products: [{ id: 'topside-roast', name: 'Round roast (topside)', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, cookingId: 'lean-roast' }] },
-      { id: 'round-steak', label: 'Round steaks', description: 'The gracilis (inner flap) goes to dice/mince.', products: [steak({ id: 'topside-round-steak', name: 'Round steak (topside)', fraction: 0.729, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB topside without gracilis 72.9 % of primal' }, ...usdaSteak(344, 'round, top round steak, boneless'), defaultThicknessCm: inch(0.5), cookingId: 'flash-steak' })] },
-      { id: 'minute', label: 'Minute steaks / stir-fry', products: [steak({ id: 'minute-steak', name: 'Minute steak', fraction: 0.729, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB topside without gracilis' }, ...usdaSteak(344, 'round, top round steak, boneless'), defaultThicknessCm: inch(0.25), allowedThicknessCm: THIN_CM, cookingId: 'minute-steak' })] },
       {
-        id: 'split',
-        label: 'Round roasts + round steaks (you choose the mix)',
-        balance: { roastId: 'topside-roast-half', steakId: 'topside-round-steak-half' },
-        products: [
-          { id: 'topside-roast-half', name: 'Round roast (topside)', kind: 'roast', fraction: 0.475, fractionRef: { sourceIds: ['tamu-rib-loin'], note: 'Half at roast yield 95 %' }, cookingId: 'lean-roast' },
-          steak({ id: 'topside-round-steak-half', name: 'Round steak (topside)', fraction: 0.365, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'Half at 72.9 % (topside without gracilis)' }, ...usdaSteak(344, 'round, top round steak, boneless'), defaultThicknessCm: inch(0.5), cookingId: 'flash-steak' }),
-        ],
+        id: 'plan',
+        label: 'Joints + the rest',
+        products: [],
+        jointPlan: {
+          roast: { id: 'topside-roast', name: 'Round roast (topside)', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, cookingId: 'lean-roast' },
+          rests: [
+            { id: 'round-steak', short: 'Round steaks', product: steak({ id: 'topside-round-steak', name: 'Round steak (topside)', fraction: 0.729, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB topside without gracilis 72.9 % of primal; the gracilis goes to dice/mince' }, ...usdaSteak(344, 'round, top round steak, boneless'), defaultThicknessCm: inch(0.5), cookingId: 'flash-steak' }) },
+            { id: 'minute', short: 'Minute steaks', product: steak({ id: 'minute-steak', name: 'Minute steak', fraction: 0.729, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB topside without gracilis' }, ...usdaSteak(344, 'round, top round steak, boneless'), defaultThicknessCm: inch(0.25), allowedThicknessCm: THIN_CM, cookingId: 'minute-steak' }) },
+            { id: 'diced', short: 'Diced', product: { id: 'topside-diced', name: 'Casserole beef (diced topside)', kind: 'diced', fraction: 0.95, fractionRef: F.dice95, cookingId: 'stew' } },
+            { id: 'mince', short: 'Mince' },
+          ],
+          defaultRoastShare: 0.5,
+          defaultRest: 'round-steak',
+        },
       },
-      { id: 'diced', label: 'Diced (casserole beef)', products: [{ id: 'topside-diced', name: 'Casserole beef (diced topside)', kind: 'diced', fraction: 0.95, fractionRef: F.dice95, cookingId: 'stew' }] },
-      toMince(),
     ],
   },
   {
@@ -410,14 +442,25 @@ export const REGIONS: Region[] = [
     quarter: 'hind',
     meatPctOfCarcass: ahdb(4.22, '6.40 kg per side'),
     description: 'The front of the hind leg above the knee. Lean; Irish butchers sell it as ball of round for pot roasting, or as round steak.',
-    defaultOption: 'pot-roast',
+    defaultOption: 'plan',
     diagramIds: ['thick-flank'],
     options: [
-      { id: 'pot-roast', label: 'Ball of round pot roasts', products: [{ id: 'ball-of-round', name: 'Ball of round (pot roast)', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, cookingId: 'pot-roast' }] },
-      { id: 'round-steak', label: 'Round steaks', description: 'Steaks from the main knuckle muscles; the rest goes to dice/mince.', products: [steak({ id: 'thick-flank-steak', name: 'Round steak (thick flank)', fraction: 0.43, fractionRef: F.knuckleSteaks, ...usdaSteak(197, 'round, knuckle, tip center, steak'), defaultThicknessCm: inch(0.5), cookingId: 'flash-steak' })] },
-      { id: 'minute', label: 'Minute steaks / stir-fry', products: [steak({ id: 'thick-flank-minute', name: 'Minute steak', fraction: 0.43, fractionRef: F.knuckleSteaks, ...usdaSteak(197, 'round, knuckle, tip center, steak'), defaultThicknessCm: inch(0.25), allowedThicknessCm: THIN_CM, cookingId: 'minute-steak' })] },
-      { id: 'diced', label: 'Diced', products: [{ id: 'thick-flank-diced', name: 'Diced thick flank', kind: 'diced', fraction: 0.68, fractionRef: F.knuckleDiced, cookingId: 'stew' }] },
-      toMince(),
+      {
+        id: 'plan',
+        label: 'Joints + the rest',
+        products: [],
+        jointPlan: {
+          roast: { id: 'ball-of-round', name: 'Ball of round (pot roast)', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, cookingId: 'pot-roast' },
+          rests: [
+            { id: 'round-steak', short: 'Round steaks', product: steak({ id: 'thick-flank-steak', name: 'Round steak (thick flank)', fraction: 0.43, fractionRef: F.knuckleSteaks, ...usdaSteak(197, 'round, knuckle, tip center, steak'), defaultThicknessCm: inch(0.5), cookingId: 'flash-steak' }) },
+            { id: 'minute', short: 'Minute steaks', product: steak({ id: 'thick-flank-minute', name: 'Minute steak', fraction: 0.43, fractionRef: F.knuckleSteaks, ...usdaSteak(197, 'round, knuckle, tip center, steak'), defaultThicknessCm: inch(0.25), allowedThicknessCm: THIN_CM, cookingId: 'minute-steak' }) },
+            { id: 'diced', short: 'Diced', product: { id: 'thick-flank-diced', name: 'Diced thick flank', kind: 'diced', fraction: 0.68, fractionRef: F.knuckleDiced, cookingId: 'stew' } },
+            { id: 'mince', short: 'Mince' },
+          ],
+          defaultRoastShare: 1,
+          defaultRest: 'round-steak',
+        },
+      },
     ],
   },
   {

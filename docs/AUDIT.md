@@ -103,6 +103,16 @@ The rule now enforced is that a US retail-cutting yield is applied only to the A
 |---|---|---|---|
 | Freezer space | 2.79 L per kg (bones shown separately) | Teagasc: 143.2 kg filled a 400 L freezer | ✅ (user's choice) |
 
+## 11. Planners (added after the audit, 2026-11-23)
+
+| Planner | How it maps to butchery | Estimates used | Tests |
+|---|---|---|---|
+| Fore rib, rib by rib | Ribs 7–10, 4 per side. Each rib goes to an on-the-bone roast (joints of whole ribs), rolled roast, côte / tomahawk (one per rib, thickness = rib spacing) or rib steaks. | — | Plan ≤ ribs available; one côte per rib; a tomahawk excludes bone-in short ribs; mass closes. |
+| Loin | Per side: T-bones from the front of the short loin, porterhouses behind; fillet out for the rest. A centre fillet (Wellington / chateaubriand) limits that side to front-section T-bones; a whole fillet allows none. Sirloin joints boneless or wing rib on the bone. | Wing rib = 3/9 of the striploin by vertebra count; **fillet tail under the front third of the short loin** (anatomy estimate, no measured figure). | Matched the old fixed loin options before they were removed; checked against AHDB kg; infeasible requests clamped with a notice; soup bones ≥ 0; mass closes. |
+| Topside / thick flank / chuck eye | Cut along the muscle: N joints, the rest as round / minute / braising steak, diced or mince. | — | Chosen count honoured; 0 joints = full-muscle steak yield; mass closes. |
+| Chuck | Three muscles, each with its own choice: Denver, chuck eye (housekeeper's cut), blade & underblade. | — | Shares from AHDB muscle kg (sum = 1). |
+| Whole-muscle counts | Tri-tip, picanha, bavette, whole fillet: 1 per side; skirts 2; short ribs 3 (NCBA). Counted by anatomy, not weight. | — | Fixed a bug where a whole animal showed 1 tri-tip. |
+
 ---
 
 ## Still open

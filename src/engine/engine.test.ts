@@ -19,14 +19,13 @@ const base = (animal: Partial<Animal> = {}, rest: Partial<AppState> = {}): AppSt
   selections: {},
   prefs: DEFAULT_PREFS,
   partRequests: DEFAULT_PARTS,
-  roastCounts: {},
   allocations: {},
   ...rest,
 });
 
 /** AHDB Beef Yield Guide reference: 303 kg R4H (4H = 4+ on the 15-point scale), 14 days' maturation. */
-const reference = (selections = {}) =>
-  base({ weightBasis: 'carcass', weightKg: 303, conformation: 'R', fatClass: '4+', hangingDays: 14, share: 'whole' }, { selections });
+const reference = (selections = {}, allocations: AppState['allocations'] = {}) =>
+  base({ weightBasis: 'carcass', weightKg: 303, conformation: 'R', fatClass: '4+', hangingDays: 14, share: 'whole' }, { selections, allocations });
 
 describe('hanging loss', () => {
   it('14 days of hanging + cutting loss reproduces AHDB drip/cutting loss 2.61 %', () => {
@@ -70,7 +69,7 @@ describe('grade scaling', () => {
 
 describe('reference distribution (AHDB Yield Guide shares)', () => {
   it('each region keeps its Yield Guide share of total meat', () => {
-    const r = compute(reference({ topside: 'roasts' }));
+    const r = compute(reference({}, { topside: { roasts: 99 } }));
     const topside = r.lines.find((l) => l.productId === 'topside-roast')!;
     const regionPlusTrimKg = (303 * YG_MEAT_PCT) / 100 * r.comp.meatFactor;
     expect(topside.weightKg / 0.95 / regionPlusTrimKg).toBeCloseTo(6.53 / YG_MEAT_PCT, 9);
@@ -162,8 +161,8 @@ describe('sizes and counts', () => {
     expect(l.weightOnly).toBe(true);
   });
   it('roast joints are sized for the family', () => {
-    const small = compute(base({}, { prefs: { ...DEFAULT_PREFS, familySize: 2 }, selections: { topside: 'roasts' } })).lines.find((l) => l.productId === 'topside-roast')!;
-    const big = compute(base({}, { prefs: { ...DEFAULT_PREFS, familySize: 8 }, selections: { topside: 'roasts' } })).lines.find((l) => l.productId === 'topside-roast')!;
+    const small = compute(base({}, { prefs: { ...DEFAULT_PREFS, familySize: 2 }, allocations: { topside: { roasts: 99 } } })).lines.find((l) => l.productId === 'topside-roast')!;
+    const big = compute(base({}, { prefs: { ...DEFAULT_PREFS, familySize: 8 }, allocations: { topside: { roasts: 99 } } })).lines.find((l) => l.productId === 'topside-roast')!;
     expect(small.eachKg!).toBeCloseTo(0.5, 0);
     expect(big.eachKg!).toBeCloseTo(2, 0);
   });
@@ -227,7 +226,7 @@ describe('Teagasc home-kill heifer calibration (the realistic factor is derived 
     const r = compute(
       base(
         { breed: 'hereford-x-dairy', sex: 'heifer', ageMonths: c.ageMonths, weightBasis: 'carcass', weightKg: c.carcassKg, conformation: c.estimatedGrade.conformation, fatClass: c.estimatedGrade.fat, hangingDays: 21 },
-        { selections: { topside: 'split' }, allocations: { 'fore-rib': { 'roast-on-bone': 99 }, loin: { tbones: 99 } } },
+        { allocations: { 'fore-rib': { 'roast-on-bone': 99 }, loin: { tbones: 99 } } },
       ),
     );
     const [realistic, commercial] = r.balance.meatRangeKg;
@@ -284,7 +283,7 @@ describe('roasts depend on the size of the animal', () => {
     expect(r.advisories.some((a) => a.id === 'roast-undersized')).toBe(true);
   });
   it('a typical steer, family of 4: joints feed about 4', () => {
-    const l = compute(base({}, { selections: { topside: 'roasts' } })).lines.find((x) => x.productId === 'topside-roast')!;
+    const l = compute(base({}, { allocations: { topside: { roasts: 99 } } })).lines.find((x) => x.productId === 'topside-roast')!;
     expect(l.undersized).toBe(false);
     expect(l.feeds).toBeGreaterThanOrEqual(3);
     expect(l.feeds).toBeLessThanOrEqual(5);
@@ -345,29 +344,47 @@ describe('thickness in inches', () => {
   });
 });
 
-describe('roast / steak balance (sirloin, topside)', () => {
-  const run = (n: number | undefined, share: 'whole' | 'half' = 'whole') =>
-    compute(base({ share }, { selections: { topside: 'split' }, roastCounts: n === undefined ? {} : { topside: n } }));
+describe('joints + the rest (topside, thick flank, chuck eye)', () => {
+  const run = (req: Record<string, number> | undefined, share: 'whole' | 'half' = 'whole') =>
+    compute(base({ share }, { allocations: req === undefined ? {} : { topside: req } }));
   const line = (r: ReturnType<typeof run>, id: string) => r.lines.find((l) => l.productId === id);
-  it('the chosen number of roasts is what you get, and the rest becomes steaks', () => {
-    expect(line(run(2), 'topside-roast-half')!.count).toBe(2);
-    expect(line(run(3), 'topside-roast-half')!.count).toBe(3);
-    expect(line(run(2), 'topside-round-steak-half')!.count!).toBeGreaterThan(line(run(3), 'topside-round-steak-half')!.count!);
+  const topsideKg = (r: ReturnType<typeof run>) => (r.balance.carcassKg * REGION_BY_ID.topside.meatPctOfCarcass.value * r.comp.meatFactor) / 100;
+  it('the chosen number of joints is what you get, and the rest becomes round steaks', () => {
+    expect(line(run({ roasts: 2, rest: 0 }), 'topside-roast')!.count).toBe(2);
+    expect(line(run({ roasts: 3, rest: 0 }), 'topside-roast')!.count).toBe(3);
+    expect(line(run({ roasts: 2, rest: 0 }), 'topside-round-steak')!.count!).toBeGreaterThan(line(run({ roasts: 3, rest: 0 }), 'topside-round-steak')!.count!);
   });
-  it('0 roasts gives all steaks; max roasts gives no steaks', () => {
-    expect(line(run(0), 'topside-roast-half')).toBeUndefined();
-    const all = compute(base({}, { selections: { topside: 'round-steak' } })).lines.find((l) => l.productId === 'topside-round-steak')!;
-    // data stores the half-split share rounded (0.365 vs 0.729 / 2)
-    expect(Math.abs(line(run(0), 'topside-round-steak-half')!.weightKg / all.weightKg - 1)).toBeLessThan(0.005);
-    const max = run(99);
-    expect(line(max, 'topside-round-steak-half')).toBeUndefined();
-    expect(line(max, 'topside-roast-half')!.count).toBe(max.balances[0].maxRoasts);
+  it('0 joints gives all round steaks at the full-muscle yield; max gives no steaks', () => {
+    const none = run({ roasts: 0, rest: 0 });
+    expect(line(none, 'topside-roast')).toBeUndefined();
+    expect(line(none, 'topside-round-steak')!.weightKg).toBeCloseTo(topsideKg(none) * 0.729, 9);
+    const max = run({ roasts: 99, rest: 0 });
+    expect(line(max, 'topside-round-steak')).toBeUndefined();
+    expect(line(max, 'topside-roast')!.count).toBe(max.jointPlans.find((j) => j.path === 'topside')!.maxRoasts);
   });
-  it('mass closes for any choice', () => {
-    for (const n of [undefined, 0, 1, 3, 99]) {
-      const b = run(n, 'half').balance;
-      expect(b.meatKg + b.fatPoolKg + b.marrowKg + b.soupBoneKg + b.hangingLossKg + b.cuttingLossKg + b.butcherTrimKg).toBeCloseTo(b.carcassKg, 6);
-    }
+  it('the rest can be minute steaks, diced or mince', () => {
+    expect(line(run({ roasts: 1, rest: 1 }), 'minute-steak')).toBeDefined();
+    expect(line(run({ roasts: 1, rest: 2 }), 'topside-diced')).toBeDefined();
+    const mince = run({ roasts: 1, rest: 3 });
+    expect(mince.lines.filter((l) => l.regionId === 'topside').map((l) => l.productId)).toEqual(['topside-roast']);
+  });
+  it('defaults: topside half joints / half round steak; thick flank all joints; chuck eye all joints', () => {
+    const r = run(undefined);
+    expect(r.jointPlans.find((j) => j.path === 'topside')!.roastShare).toBe(0.5);
+    expect(r.jointPlans.find((j) => j.path === 'thick-flank')!.roastShare).toBe(1);
+    expect(r.jointPlans.find((j) => j.path === 'chuck/eye')!.roastShare).toBe(1);
+  });
+  it('mass closes for any choice, whole and half', () => {
+    for (const share of ['whole', 'half'] as const)
+      for (const req of [undefined, { roasts: 0, rest: 0 }, { roasts: 1, rest: 1 }, { roasts: 2, rest: 2 }, { roasts: 99, rest: 3 }]) {
+        const b = run(req, share).balance;
+        expect(b.meatKg + b.fatPoolKg + b.marrowKg + b.soupBoneKg + b.hangingLossKg + b.cuttingLossKg + b.butcherTrimKg).toBeCloseTo(b.carcassKg, 6);
+      }
+  });
+  it('chuck: each muscle has its own choice', () => {
+    const r = compute(base({}, { selections: { 'chuck/denver': 'mince', 'chuck/rest': 'diced' }, allocations: { 'chuck/eye': { roasts: 1, rest: 0 } } }));
+    const chuck = r.lines.filter((l) => l.regionId === 'chuck').map((l) => l.productId).sort();
+    expect(chuck).toEqual(['chuck-diced', 'chuck-eye-braising', 'housekeepers-cut']);
   });
 });
 
