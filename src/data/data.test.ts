@@ -4,9 +4,9 @@ import type { CutOption, ProductSpec, Sourced } from '../model/types';
 import { ADVISORIES } from './advisories';
 import { BREEDS } from './breeds';
 import { COOKING_BY_ID } from './cooking';
-import { AHDB_REFERENCE_CARCASS } from './grading';
-import { PARTS } from './parts';
-import { REFERENCE_BONE_PCT, REFERENCE_FAT_PCT, REGIONS, TRIM_POOL_PCT_OF_CARCASS } from './regions';
+import { AHDB_PER_SIDE_KG as K, AHDB_REFERENCE_CARCASS } from './grading';
+import { PART_BY_ID, PARTS } from './parts';
+import { REFERENCE_BONE_PCT, REFERENCE_FAT_PCT, REGION_BY_ID, REGIONS, TRIM_POOL_PCT_OF_CARCASS } from './regions';
 import { SOURCE_BY_ID } from './sources';
 
 function walkOptions(options: CutOption[], visit: (o: CutOption, path: string) => void, path = ''): void {
@@ -126,5 +126,97 @@ describe('parts', () => {
 describe('breeds', () => {
   it('kill-out values are plausible (40–62 %)', () => {
     for (const b of BREEDS) for (const k of Object.values(b.killOutPct)) expect(k.value).toBeGreaterThan(40), expect(k.value).toBeLessThan(62);
+  });
+});
+
+// ───────── Helpers to look up options by path ─────────
+/** Path segments alternate: region / option / part / option / part / ... */
+function option(path: string): CutOption {
+  const [regionId, ...rest] = path.split('/');
+  let options = REGION_BY_ID[regionId].options;
+  let current: CutOption | undefined;
+  rest.forEach((seg, i) => {
+    if (i % 2 === 0) {
+      current = options.find((o) => o.id === seg);
+      if (!current) throw new Error(`bad option ${seg} in ${path}`);
+    } else {
+      const part = current?.parts?.find((p) => p.id === seg);
+      if (!part) throw new Error(`bad part ${seg} in ${path}`);
+      options = part.options;
+    }
+  });
+  if (!current) throw new Error(`bad path ${path}`);
+  return current;
+}
+const partShare = (path: string, partId: string) => option(path).parts!.find((p) => p.id === partId)!.share;
+const fraction = (path: string, productId: string) => option(path).products!.find((p) => p.id === productId)!.fraction;
+
+describe('muscle-based shares match AHDB per-side kg (kg ÷ kg)', () => {
+  const tol = 0.02;
+  it('region meat % matches AHDB per-side kg', () => {
+    expect(REGION_BY_ID.rump.meatPctOfCarcass.value * 1.515).toBeCloseTo(K.rumpRegion, 1);
+    expect(REGION_BY_ID.loin.meatPctOfCarcass.value * 1.515).toBeCloseTo(K.loinRegion, 1);
+  });
+  it.each([
+    ['picanha share', () => partShare('rump/split', 'picanha'), K.rumpCap / K.rumpRegion],
+    ['tri-tip share', () => partShare('rump/split', 'tri-tip'), K.rumpTail / K.rumpRegion],
+    ['prime rump + bistro share', () => partShare('rump/split', 'prime-rump'), (K.primeRump + K.rumpBistro + (K.rumpRegion - K.rumpCap - K.rumpTail - K.primeRump - K.rumpBistro)) / K.rumpRegion],
+    ['striploin share', () => partShare('loin/separate', 'striploin'), K.striploin / K.loinRegion],
+    ['fillet share', () => partShare('loin/separate', 'fillet'), K.fillet / K.loinRegion],
+    ['eye of round share', () => partShare('silverside/split', 'eye-of-round'), K.salmonCut / K.silverside],
+    ['denver fraction', () => fraction('chuck/denver', 'denver-steak'), K.denver / K.chuckRegion],
+    ['bavette fraction', () => fraction('thin-flank/bavette', 'bavette'), K.bavette / K.thinFlank],
+    ['skirts fraction', () => fraction('thin-flank/bavette', 'flank-skirts'), (K.gooseSkirt + K.insideSkirt) / K.thinFlank],
+    ['fillet tail fraction', () => fraction('loin/separate/fillet/steaks', 'fillet-tail'), K.filletTail / K.fillet],
+    ['chateaubriand fraction', () => fraction('loin/separate/fillet/chateaubriand', 'chateaubriand'), K.middleFillet / K.fillet],
+  ])('%s', (_name, actual, expected) => {
+    expect(Math.abs(actual() - expected)).toBeLessThanOrEqual(tol);
+  });
+});
+
+describe('bone budget', () => {
+  /** Bone (as % of carcass) that a leaf option keeps in its products. */
+  const boneIn = (o: CutOption, meatPct: number) =>
+    (o.products ?? []).reduce((a, p) => a + ((p.boneFactor ?? 1) - 1) * p.fraction * meatPct, 0);
+
+  it('bone kept in each option fits its region (plus bone of options it excludes)', () => {
+    for (const r of REGIONS) {
+      const visit = (opts: CutOption[], meatPct: number, path: string) => {
+        for (const o of opts) {
+          const borrowed = (o.excludes ?? []).reduce((a, x) => a + (REGION_BY_ID[x.path.split('/')[0]].bonePctOfCarcass?.value ?? 0), 0);
+          const allowance = (r.bonePctOfCarcass?.value ?? 0) + borrowed;
+          expect(boneIn(o, meatPct), `${path}/${o.id}`).toBeLessThanOrEqual(allowance + 1e-9);
+          for (const part of o.parts ?? []) visit(part.options, meatPct * part.share, `${path}/${o.id}/${part.id}`);
+        }
+      };
+      visit(r.options, r.meatPctOfCarcass.value, r.id);
+    }
+  });
+
+  it('fixed bone parts plus all in-cut bone fit the carcass bone pool', () => {
+    const inCut = REGIONS.filter((r) => r.id !== 'fore-rib').reduce((a, r) => a + (r.bonePctOfCarcass?.value ?? 0), 0);
+    const fixedBoneParts = PARTS.filter((p) => p.group === 'bone' && p.reference.basis === 'carcass' && !p.residualOf).reduce((a, p) => a + p.reference.pct.value, 0);
+    expect(inCut + fixedBoneParts).toBeLessThanOrEqual(REFERENCE_BONE_PCT.value);
+  });
+
+  it('residual soup bones = pool minus marrow bones (nothing else taken)', () => {
+    expect(PART_BY_ID['soup-bones'].reference.pct.value).toBeCloseTo(REFERENCE_BONE_PCT.value - PART_BY_ID['marrow-bones'].reference.pct.value, 6);
+  });
+});
+
+describe('cross-region exclusions', () => {
+  it('every excludes path and option id resolves, and does not point at its own region', () => {
+    for (const r of REGIONS)
+      walkOptions(r.options, (o) => {
+        for (const x of o.excludes ?? []) {
+          const [regionId, ...partPath] = x.path.split('/');
+          expect(REGION_BY_ID[regionId], x.path).toBeDefined();
+          expect(regionId).not.toBe(r.id);
+          const opts = partPath.length
+            ? REGION_BY_ID[regionId].options.flatMap((oo) => oo.parts ?? []).find((p) => p.id === partPath.at(-1))!.options
+            : REGION_BY_ID[regionId].options;
+          for (const id of x.optionIds) expect(opts.map((oo) => oo.id), `${x.path}:${id}`).toContain(id);
+        }
+      });
   });
 });

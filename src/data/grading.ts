@@ -142,3 +142,31 @@ export const PRESENTATION_FACTORS_PCT = {
   jugularFat: 0.3,
   sourceIds: ['eu-2017-1184', 'eu-2017-1182'],
 };
+
+/**
+ * AHDB Beef Yield Guide muscle/cut weights, kg PER SIDE of the 303 kg (151.5 kg side) R4H reference carcass.
+ * Used to check that muscle-based shares in regions.ts are kg ÷ kg (not mixed with % of carcass).
+ */
+export const AHDB_PER_SIDE_KG = {
+  sideKg: 151.5,
+  chuckRegion: 4.75 * 1.515 + 1.5 + 1.09 + 0.43, // chuck roll 7.19 + blade + underblade + underblade fillet
+  denver: 2.36,
+  chuckEyeCentre: 2.76,
+  rumpRegion: 5.99 + 1.42, // D rump + rump tail
+  rumpCap: 1.44,
+  primeRump: 2.54,
+  rumpBistro: 1.18,
+  rumpTail: 1.42,
+  loinRegion: 6.8 + 2.91,
+  striploin: 6.8,
+  fillet: 2.91,
+  middleFillet: 1.25,
+  filletTail: 0.29,
+  silverside: 9.66,
+  salmonCut: 2.8,
+  thinFlank: 10.09,
+  bavette: 1.44,
+  gooseSkirt: 0.77,
+  insideSkirt: 0.72,
+  sourceIds: ['ahdb-yield-guide'],
+};

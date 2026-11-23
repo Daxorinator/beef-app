@@ -152,6 +152,11 @@ export interface CutOption {
   parts?: RegionPart[];
   /** Declarative advisories evaluated against the animal (no logic here). */
   advisories?: Advisory[];
+  /**
+   * Cross-region mutual exclusions: choosing this option rules out these options elsewhere.
+   * `path` uses the Selections key format ("plate", "loin/striploin").
+   */
+  excludes?: { path: string; optionIds: string[]; reason: string }[];
 }
 
 export interface RegionPart {
@@ -215,6 +220,11 @@ export interface AnimalPart {
    * 'carcass' = % of carcass weight (bones, fat trim, dripping derived from the carcass).
    */
   reference: { basis: 'live' | 'carcass'; pct: Sourced };
+  /**
+   * Residual parts take whatever is left of a pool after other choices (e.g. soup bones = carcass bone
+   * minus marrow bones minus bone left in cuts). `reference.pct` is then the maximum (nothing else taken).
+   */
+  residualOf?: 'bone' | 'fat';
   /** Default status; overridden by the first matching statusRule. */
   status: PartStatus;
   /** Conditional status, e.g. skull/brain/eyes → 'srm' when minAgeMonths 12 (IE negligible risk). */

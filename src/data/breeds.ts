@@ -2,6 +2,7 @@ import type { BreedProfile, Sourced } from '../model/types';
 
 const v = (value: number, sourceIds: string[], note?: string): Sourced => ({ value, evidence: 'verified', sourceIds, note });
 const s = (value: number, sourceIds: string[], note?: string): Sourced => ({ value, evidence: 'secondary', sourceIds, note });
+const d = (value: number, sourceIds: string[], note: string): Sourced => ({ value, evidence: 'estimate', sourceIds, note: `Derived from verified source figures: ${note}` });
 const e = (value: number, sourceIds: string[], note?: string): Sourced => ({ value, evidence: 'estimate', sourceIds, note });
 
 /**
@@ -27,7 +28,7 @@ export const BREEDS: BreedProfile[] = [
     eyeMuscleCm2PerKg: e(0.225, ['eye-muscle-study'], 'AA × Holstein 0.220–0.221; purebred assumed slightly higher'),
     typicalCarcassKg: {
       steer: s(327.1, ['europ-factors-study'], 'Irish EUROP study mean for Angus steers'),
-      heifer: s(286, ['teagasc-systems'], 'Teagasc Angus heifer trial (O+, 4−)'),
+      heifer: s(286, ['teagasc-angus-heifer'], 'Teagasc Angus heifer trial (O+, 4−); search excerpt only'),
     },
     notes: [
       'Naturally polled (no horns).',
@@ -41,8 +42,8 @@ export const BREEDS: BreedProfile[] = [
     type: 'dairy-x-beef',
     killOutPct: {
       bull: e(54, ['teagasc-systems']),
-      steer: v(52.5, ['teagasc-systems'], '23 mo early-maturing steer: 610 kg → 310–330 kg'),
-      heifer: v(52.2, ['teagasc-systems'], '19 mo early-maturing heifer: 460 kg → 230–250 kg'),
+      steer: d(52.5, ['teagasc-systems'], '23 mo early-maturing steer: 610 kg → 310–330 kg'),
+      heifer: d(52.2, ['teagasc-systems'], '19 mo early-maturing heifer: 460 kg → 230–250 kg'),
       cow: e(48, ['minchin-2009']),
     },
     defaultConformation: { bull: 'O+', steer: 'O+', heifer: 'O+', cow: 'O-' },
@@ -50,8 +51,8 @@ export const BREEDS: BreedProfile[] = [
     yieldAdjustmentPts: e(0, ['teagasc-dissection']),
     eyeMuscleCm2PerKg: s(0.22, ['eye-muscle-study'], 'AA × Holstein 0.220–0.221 cm²/kg'),
     typicalCarcassKg: {
-      steer: s(306.7, ['icbf-breeds'], 'ICBF Angus progeny mean (60 % from dairy dams), O+ 3+'),
-      heifer: v(240, ['teagasc-systems'], '19 mo heifer target 230–250 kg'),
+      steer: e(306.7, ['icbf-breeds'], 'ICBF mean of all Angus-sired progeny, steers and heifers combined (60 % from dairy dams), O+ 3+; applied to steers'),
+      heifer: d(240, ['teagasc-systems'], '19 mo heifer target 230–250 kg (midpoint)'),
     },
     notes: ['Usually polled (Angus is dominant polled).', 'ICBF Angus progeny average O+ conformation, fat 3+.'],
   },
@@ -71,7 +72,7 @@ export const BREEDS: BreedProfile[] = [
     eyeMuscleCm2PerKg: e(0.2, ['eye-muscle-study'], 'Below Holstein (0.208); Jersey-sired cattle had poorer conformation'),
     typicalCarcassKg: {
       steer: v(277, ['teagasc-5923'], 'Jersey × HF male, ~2 years'),
-      cow: s(223, ['agriland-2025'], 'National cow mean 298.6 kg less the 75.8 kg Jersey vs HF cow difference (Teagasc Moorepark)'),
+      cow: e(223, ['agriland-2025', 'teagasc-moorepark-jersey'], 'Derived: national cow mean 298.6 kg less the 75.8 kg purebred Jersey vs HF cow difference'),
     },
     notes: [
       'Yellow fat (beta-carotene) is cosmetic and normal for Jersey — flavour is unaffected.',
@@ -85,8 +86,8 @@ export const BREEDS: BreedProfile[] = [
     name: 'Holstein-Friesian',
     type: 'dairy',
     killOutPct: {
-      bull: v(52, ['teagasc-systems'], 'U-16 mo HF bull 51.9 %, 18–20 mo 52.5 %'),
-      steer: v(51.6, ['teagasc-systems'], '24 mo Friesian steer 620 kg → 310–330 kg'),
+      bull: d(52, ['teagasc-systems'], 'U-16 mo HF bull 51.9 %, 18–20 mo 52.5 %'),
+      steer: d(51.6, ['teagasc-systems'], '24 mo Friesian steer 620 kg → 310–330 kg'),
       heifer: e(50.5, ['teagasc-systems']),
       cow: e(46, ['minchin-2009'], 'Only 22 % of Friesian cull cows met the target spec'),
     },
@@ -116,7 +117,7 @@ export const BREEDS: BreedProfile[] = [
     yieldAdjustmentPts: e(0, ['teagasc-dissection']),
     eyeMuscleCm2PerKg: e(0.215, ['eye-muscle-study']),
     typicalCarcassKg: {
-      steer: s(310.5, ['icbf-breeds'], 'ICBF Hereford progeny mean (62 % from dairy dams), O+ 3+'),
+      steer: e(310.5, ['icbf-breeds'], 'ICBF mean of all Hereford-sired progeny, steers and heifers combined (62 % from dairy dams), O+ 3+; applied to steers'),
       heifer: v(245, ['teagasc-heifer']),
     },
     notes: ['Hereford is often horned unless polled-line or disbudded.', 'Good marbling and tenderness (Teagasc example).'],
@@ -126,9 +127,9 @@ export const BREEDS: BreedProfile[] = [
     name: 'Continental (Limousin / Charolais / Belgian Blue / Simmental)',
     type: 'beef-late-maturing',
     killOutPct: {
-      bull: v(58, ['teagasc-systems'], 'Suckler bulls 57.1–59.2 %'),
-      steer: v(54.2, ['teagasc-systems'], '20 mo suckler steer 590 kg → 310–330 kg'),
-      heifer: v(54, ['teagasc-systems'], '20 mo suckler heifer 565 kg → 290–320 kg'),
+      bull: d(58, ['teagasc-systems'], 'Suckler bulls 57.1–59.2 %'),
+      steer: d(54.2, ['teagasc-systems'], '20 mo suckler steer 590 kg → 310–330 kg'),
+      heifer: d(54, ['teagasc-systems'], '20 mo suckler heifer 565 kg → 290–320 kg'),
       cow: e(51, ['minchin-2009'], 'Late-maturing-sired cull cows met the target spec most often (53 %)'),
     },
     defaultConformation: { bull: 'U', steer: 'R+', heifer: 'R+', cow: 'O+' },

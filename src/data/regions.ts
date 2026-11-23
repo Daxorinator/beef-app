@@ -134,8 +134,9 @@ export const REGIONS: Region[] = [
       {
         id: 'tomahawk',
         label: 'Tomahawk steaks',
-        description: 'Bone-in rib steak with the long rib bone left on and cleaned. Ask your butcher in advance; uses rib bone from the plate.',
-        products: [steak({ id: 'tomahawk', name: 'Tomahawk steak', fraction: 0.95, boneFactor: 1.3, gramsPerCm: 200, defaultThicknessCm: 5, allowedThicknessCm: THICK_CM, cookingId: 'thick-bone-in-steak' })],
+        description: 'Bone-in rib steak with the long rib bone left on and cleaned. Ask your butcher in advance; the long bone comes from the short-rib plate.',
+        excludes: [{ path: 'plate', optionIds: ['short-ribs', 'jacobs-ladder'], reason: 'Tomahawk bones run down into the short-rib plate, so it can no longer be cut as bone-in short ribs.' }],
+        products: [steak({ id: 'tomahawk', name: 'Tomahawk steak', fraction: 0.95, boneFactor: 1.28, gramsPerCm: 200, defaultThicknessCm: 5, allowedThicknessCm: THICK_CM, cookingId: 'thick-bone-in-steak' })],
       },
       {
         id: 'split',
@@ -252,8 +253,8 @@ export const REGIONS: Region[] = [
                 id: 'steaks',
                 label: 'Fillet steaks + tail for stir-fry',
                 products: [
-                  steak({ id: 'fillet-steak', name: 'Fillet steak', aka: ['Tournedos', 'Medallion'], fraction: 0.75, gramsPerCm: 45, defaultThicknessCm: 4, allowedThicknessCm: [3, 4, 5], cookingId: 'fillet' }),
-                  { id: 'fillet-tail', name: 'Fillet tail (stir-fry / stroganoff)', kind: 'piece', fraction: 0.15, pieceGrams: 290, cookingId: 'fillet' },
+                  steak({ id: 'fillet-steak', name: 'Fillet steak', aka: ['Tournedos', 'Medallion'], fraction: 0.8, gramsPerCm: 45, defaultThicknessCm: 4, allowedThicknessCm: [3, 4, 5], cookingId: 'fillet' }),
+                  { id: 'fillet-tail', name: 'Fillet tail (stir-fry / stroganoff)', kind: 'piece', fraction: 0.1, pieceGrams: 290, cookingId: 'fillet' },
                 ],
               },
               { id: 'whole', label: 'Whole fillet (Wellington / roast)', products: [{ id: 'whole-fillet', name: 'Whole fillet', kind: 'roast', fraction: 0.95, cookingId: 'fillet' }] },
@@ -262,9 +263,9 @@ export const REGIONS: Region[] = [
                 label: 'Chateaubriand + fillet steaks',
                 description: 'The thick centre cut kept as a roasting piece for two; the rest as steaks.',
                 products: [
-                  { id: 'chateaubriand', name: 'Chateaubriand (centre fillet, serves 2)', kind: 'piece', fraction: 0.4, pieceGrams: 500, cookingId: 'fillet' },
-                  steak({ id: 'fillet-steak-c', name: 'Fillet steak', fraction: 0.35, gramsPerCm: 45, defaultThicknessCm: 4, allowedThicknessCm: [3, 4, 5], cookingId: 'fillet' }),
-                  { id: 'fillet-tail-c', name: 'Fillet tail (stir-fry)', kind: 'piece', fraction: 0.15, pieceGrams: 290, cookingId: 'fillet' },
+                  { id: 'chateaubriand', name: 'Chateaubriand (centre fillet, serves 2)', kind: 'piece', fraction: 0.43, pieceGrams: 500, cookingId: 'fillet' },
+                  steak({ id: 'fillet-steak-c', name: 'Fillet steak', fraction: 0.37, gramsPerCm: 45, defaultThicknessCm: 4, allowedThicknessCm: [3, 4, 5], cookingId: 'fillet' }),
+                  { id: 'fillet-tail-c', name: 'Fillet tail (stir-fry)', kind: 'piece', fraction: 0.1, pieceGrams: 290, cookingId: 'fillet' },
                 ],
               },
             ],
@@ -293,7 +294,7 @@ export const REGIONS: Region[] = [
           {
             id: 'picanha',
             name: 'Rump cap (picanha)',
-            share: 0.29,
+            share: 0.19,
             defaultOption: 'whole',
             options: [
               { id: 'whole', label: 'Whole picanha', products: [{ id: 'picanha-whole', name: 'Picanha (whole rump cap)', kind: 'roast', fraction: 0.95, cookingId: 'prime-roast' }] },
@@ -302,8 +303,8 @@ export const REGIONS: Region[] = [
           },
           {
             id: 'prime-rump',
-            name: 'Prime rump',
-            share: 0.52,
+            name: 'Prime rump (incl. bistro)',
+            share: 0.62,
             defaultOption: 'steaks',
             options: [
               { id: 'steaks', label: 'Rump steaks', products: [steak({ id: 'prime-rump-steak', name: 'Rump steak', fraction: 0.9, gramsPerCm: 90, defaultThicknessCm: 2, cookingId: 'prime-steak' })] },
@@ -428,7 +429,7 @@ export const REGIONS: Region[] = [
         label: 'Bavette & skirts out, rest to mince',
         products: [
           { id: 'bavette', name: 'Bavette (flank steak)', kind: 'piece', fraction: 0.14, pieceGrams: 360, cookingId: 'flash-steak', notes: 'Whole bavette ≈ 1.4 kg per side, usually portioned' },
-          { id: 'flank-skirts', name: 'Skirt steak (goose & inside skirt)', kind: 'piece', fraction: 0.22, pieceGrams: 370, cookingId: 'flash-steak' },
+          { id: 'flank-skirts', name: 'Skirt steak (goose & inside skirt)', kind: 'piece', fraction: 0.15, pieceGrams: 370, cookingId: 'flash-steak' },
         ],
       },
       { id: 'rolled', label: 'Rolled flank pot roast', products: [{ id: 'rolled-flank', name: 'Rolled flank', kind: 'roast', fraction: 0.7, cookingId: 'pot-roast' }] },
