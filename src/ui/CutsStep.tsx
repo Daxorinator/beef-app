@@ -4,8 +4,8 @@ import { REGION_BY_ID, REGIONS } from '../data/regions';
 import { compute, type EngineResult, type Line } from '../engine/compute';
 import { exclusionReason, optionsAt } from '../engine/selections';
 import type { AppState } from '../engine/state';
-import type { CutOption, ProductSpec, Selections } from '../model/types';
-import { CookBadges, Evidence } from './bits';
+import type { CutOption, Selections } from '../model/types';
+import { CookBadges, Evidence, ThicknessPicker } from './bits';
 import { regionCategories } from './categories';
 import { CowDiagram } from './CowDiagram';
 import { kg, weight } from './format';
@@ -58,19 +58,6 @@ function OptionList({ state, path, options, current, result, onPick }: {
         );
       })}
     </div>
-  );
-}
-
-function ThicknessPicker({ line, spec, onThickness }: { line: Line; spec: ProductSpec; onThickness: (id: string, cm: number) => void }) {
-  if (!spec.allowedThicknessCm || line.thicknessCm === undefined) return null;
-  return (
-    <label className="thick">
-      <span>{line.name}</span>
-      <select value={line.thicknessCm} onChange={(e) => onThickness(spec.id, Number(e.target.value))}>
-        {spec.allowedThicknessCm.map((t) => <option key={t} value={t}>{t} cm</option>)}
-      </select>
-      {!line.weightOnly && line.count ? <span className="hint">≈ {line.count} at {weight(line.eachKg!)}</span> : <span className="hint">sold by weight</span>}
-    </label>
   );
 }
 

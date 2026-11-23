@@ -1,6 +1,7 @@
 import { PACK_OPTIONS } from '../data/defaults';
 import type { EngineResult } from '../engine/compute';
 import type { ButcherPrefs, FamilySize } from '../model/types';
+import { ThicknessPicker } from './bits';
 import { kg } from './format';
 
 interface Props {
@@ -15,6 +16,7 @@ const STEAK_CM = [1.5, 2, 2.5, 3, 4, 5];
 export function PackingStep({ prefs: p, result, onChange }: Props) {
   const set = <K extends keyof ButcherPrefs>(k: K, v: ButcherPrefs[K]) => onChange({ ...p, [k]: v });
   const trimKg = result.balance.trimPoolKg;
+  const steaks = result.lines.filter((l) => l.spec?.allowedThicknessCm && l.thicknessCm !== undefined);
   const splitTotal = p.trimSplit.mince + p.trimSplit.burgers + p.trimSplit.diced || 1;
 
   const setSplit = (k: keyof ButcherPrefs['trimSplit'], v: number) => {
@@ -53,7 +55,7 @@ export function PackingStep({ prefs: p, result, onChange }: Props) {
         <div className="row2">
           <label className="field">
             <span>Standard thickness</span>
-            <select value={p.steakThicknessCm} onChange={(e) => onChange({ ...p, steakThicknessCm: Number(e.target.value) })}>
+            <select value={p.steakThicknessCm} onChange={(e) => onChange({ ...p, steakThicknessCm: Number(e.target.value), thicknessOverrides: Object.fromEntries(Object.entries(p.thicknessOverrides).filter(([id]) => !result.lines.some((l) => l.productId === id && l.spec?.defaultThicknessCm === 2.5))) })}>
               {STEAK_CM.map((x) => <option key={x} value={x}>{x} cm</option>)}
             </select>
           </label>
@@ -64,7 +66,13 @@ export function PackingStep({ prefs: p, result, onChange }: Props) {
             </select>
           </label>
         </div>
-        <p className="hint">Thick cuts (côte de boeuf, fillet, osso buco) and thin cuts (minute steak) keep their own thickness. Change them on the Cuts step.</p>
+        <p className="hint">Thicker steaks mean fewer, bigger steaks from the same meat. Thick cuts (côte de boeuf, fillet, osso buco) and thin cuts (minute steak) keep their own range.</p>
+        {steaks.length > 0 && (
+          <div className="part">
+            <h3>Thickness by cut</h3>
+            {steaks.map((l) => <ThicknessPicker key={l.productId} line={l} spec={l.spec!} onThickness={(id, cm) => set('thicknessOverrides', { ...p.thicknessOverrides, [id]: cm })} />)}
+          </div>
+        )}
         {Object.keys(p.thicknessOverrides).length > 0 && (
           <button className="link" onClick={() => set('thicknessOverrides', {})}>Reset {Object.keys(p.thicknessOverrides).length} per-cut thickness change(s)</button>
         )}
