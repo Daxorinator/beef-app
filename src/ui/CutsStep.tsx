@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { PRESETS, type Preset } from '../data/presets';
 import { REGION_BY_ID, REGIONS } from '../data/regions';
+import type { LoinPlan } from '../engine/loin';
 import { compute, type AllocationInfo, type BalanceInfo, type EngineResult, type Line } from '../engine/compute';
 import { exclusionReason, optionsAt } from '../engine/selections';
 import type { AppState } from '../engine/state';
@@ -134,6 +135,73 @@ function AllocationPicker({ info, lines, sides, onChange }: { info: AllocationIn
   );
 }
 
+function Stepper({ label, value, max, onChange }: { label: string; value: number; max: number; onChange: (n: number) => void }) {
+  return (
+    <span className="stepper-ctl" role="group" aria-label={label}>
+      <button aria-label={`Fewer: ${label}`} disabled={value <= 0} onClick={() => onChange(value - 1)}>−</button>
+      <output>{value}</output>
+      <button aria-label={`More: ${label}`} disabled={value >= max} onClick={() => onChange(value + 1)}>+</button>
+    </span>
+  );
+}
+
+function LoinPicker({ plan, lines, onChange }: { plan: LoinPlan; lines: Line[]; onChange: (req: Record<string, number>) => void }) {
+  const u = plan.used;
+  const set = (patch: Partial<typeof u>) => onChange({ ...u, ...patch });
+  const line = (id: string) => lines.find((l) => l.productId === id);
+  const desc = (id: string) => {
+    const l = line(id);
+    return l ? `${l.count ?? ''}${l.eachKg ? ` × ${weight(l.eachKg)}` : ''}${l.feeds ? `, feeds ${l.feeds}` : ''}` : '';
+  };
+  const two = plan.sides.length > 1;
+  const rows: { key: keyof typeof u; label: string; hint: string; max: number; ids: string[] }[] = [
+    { key: 'tbones', label: 'T-bones & porterhouses', hint: 'On the bone, cut from the front of the short loin (T-bones first, then porterhouses).', max: plan.max.onBone, ids: ['t-bone', 'porterhouse'] },
+    { key: 'wholeFillets', label: 'Whole fillets', hint: 'For roasting or a large Wellington. Needs a side with no T-bones.', max: plan.max.wholeFillets, ids: ['whole-fillet'] },
+    { key: 'centreFillets', label: 'Centre fillets (Wellington / chateaubriand)', hint: 'The thick centre kept whole. That side can still give a few T-bones from the front.', max: plan.max.centreFillets, ids: ['chateaubriand'] },
+    { key: 'sirloinRoasts', label: 'Sirloin joints', hint: '', max: plan.max.sirloinRoasts, ids: ['sirloin-roast', 'wing-rib'] },
+  ];
+  return (
+    <div className="part allocation">
+      <h3>Plan the loin <span className="opt">{two ? '2 sides' : '1 side'}</span></h3>
+      <div className="quick-fill" role="group" aria-label="Quick plans">
+        <button className="chip" onClick={() => onChange({})}>Fillet &amp; sirloin steaks</button>
+        <button className="chip" onClick={() => onChange({ tbones: 99 })}>All T-bones</button>
+        <button className="chip" onClick={() => onChange({ wholeFillets: 99, sirloinRoasts: 99 })}>Whole fillets + sirloin roasts</button>
+      </div>
+      <div className="loin-sides">
+        {plan.sides.map((s, i) => (
+          <div key={i} className="loin-side">
+            {two && <b>Side {i + 1}</b>}
+            <span>
+              {[
+                s.tBones ? `${s.tBones} T-bone${s.tBones > 1 ? 's' : ''}` : '',
+                s.porterhouses ? `${s.porterhouses} porterhouse${s.porterhouses > 1 ? 's' : ''}` : '',
+                s.reservation === 'whole' ? 'whole fillet' : s.reservation === 'centre' ? 'centre fillet kept whole' : 'rest of fillet as steaks',
+              ].filter(Boolean).join(' · ')}
+            </span>
+          </div>
+        ))}
+      </div>
+      <ul className="alloc-list">
+        {rows.map((r) => (
+          <li key={r.key}>
+            <span />
+            <span className="alloc-label">
+              {r.label}
+              <span className="hint">{r.ids.map(desc).filter(Boolean).join(' · ') || r.hint}</span>
+            </span>
+            <Stepper label={r.label} value={u[r.key]} max={r.max} onChange={(n) => set({ [r.key]: n })} />
+          </li>
+        ))}
+      </ul>
+      <label className="check small">
+        <input type="checkbox" checked={u.wingOnBone > 0} onChange={(e) => set({ wingOnBone: e.target.checked ? 1 : 0 })} /> Sirloin joints on the bone (wing rib)
+      </label>
+      <p className="hint">The rest: {[desc('fillet-steak') && `fillet steaks ${desc('fillet-steak')}`, desc('fillet-tail') && `fillet tail ${desc('fillet-tail')}`, desc('sirloin-steak') && `sirloin steaks ${desc('sirloin-steak')}`].filter(Boolean).join(' · ') || 'nothing left'}.</p>
+    </div>
+  );
+}
+
 function BalancePicker({ b, lines, familySize, onChange }: { b: BalanceInfo; lines: Line[]; familySize: number; onChange: (n: number) => void }) {
   const roast = lines.find((l) => l.productId === b.roastId);
   const steak = lines.find((l) => l.productId === b.steakId);
@@ -229,6 +297,10 @@ export function CutsStep({ state, result, region: regionId, onRegion, onSelectio
               <h3>{part.name} <span className="opt">{Math.round(part.share * 100)} % of the {region.name.toLowerCase()}</span></h3>
               <OptionList state={state} path={`${region.id}/${part.id}`} options={part.options} current={sel[`${region.id}/${part.id}`]} result={result} onPick={(id) => pick(`${region.id}/${part.id}`, id)} />
             </div>
+          ))}
+
+          {result.loinPlans.filter((x) => x.path === region.id).map((x) => (
+            <LoinPicker key={x.path} plan={x.plan} lines={regionLines} onChange={(req) => onAllocation(x.path, req)} />
           ))}
 
           {result.allocations.filter((x) => x.path === region.id).map((x) => (

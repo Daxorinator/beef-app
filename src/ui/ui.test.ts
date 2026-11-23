@@ -28,7 +28,7 @@ describe('presets', () => {
 
 describe('persistence', () => {
   it('share links round-trip', () => {
-    const s = { ...DEFAULT_STATE, animal: { ...DEFAULT_STATE.animal, breed: 'jersey' as const, weightKg: 432 }, selections: { loin: 't-bone' } };
+    const s = { ...DEFAULT_STATE, animal: { ...DEFAULT_STATE.animal, breed: 'jersey' as const, weightKg: 432 }, selections: { rump: 'roast' } };
     expect(decodeState(`#s=${encodeState(s)}`)).toEqual(s);
   });
   it('garbage falls back to defaults', () => {
