@@ -121,7 +121,7 @@ function sizeProduct(line: Line, p: ProductSpec, wholeCarcassKg: number, prefs: 
     line.eachKg = w / count;
     line.perPack = 1;
     line.packs = count;
-    line.feeds = Math.max(1, Math.floor((line.eachKg * 1000) / (p.boneFactor ?? 1) / prefs.roastGramsPerPerson));
+    line.feeds = Math.max(1, Math.round((line.eachKg * 1000) / (p.boneFactor ?? 1) / prefs.roastGramsPerPerson));
     line.undersized = w < target * 0.75;
     line.sizeNote = `Joints sized for ${prefs.familySize} people at ${prefs.roastGramsPerPerson} g boneless each${p.boneFactor ? ' (plus bone)' : ''}`;
     return;

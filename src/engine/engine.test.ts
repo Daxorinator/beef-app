@@ -308,3 +308,20 @@ it('a light live weight suggests it may be the carcass weight', () => {
   expect(compute(base({ breed: 'jersey', sex: 'cow', ageMonths: 72, weightKg: 350 })).advisories.some((x) => x.id === 'light-animal')).toBe(true);
   expect(compute(base({ breed: 'jersey', sex: 'cow', ageMonths: 72, weightKg: 350, weightBasis: 'carcass' })).advisories.some((x) => x.id === 'light-animal')).toBe(false);
 });
+
+describe('anatomical count bounds (per side)', () => {
+  const animals = BREEDS.flatMap((b) => (['steer', 'heifer', 'bull', 'cow'] as Sex[]).map((sex) => ({ breed: b.id, sex })));
+  const count = (sel: Record<string, string>, id: string, a: Partial<Animal>, cm?: number) =>
+    compute(base({ ...a, share: 'half' }, { selections: sel, prefs: { ...DEFAULT_PREFS, ...(cm ? { thicknessOverrides: { [id]: cm } } : {}) } })).lines.find((l) => l.productId === id)?.count ?? 0;
+  it.each(animals)('$breed $sex: bone-in rib steaks ≤ 4 (ribs 7–10) at 5 cm', (a) => {
+    expect(count({ 'fore-rib': 'cote' }, 'cote-de-boeuf', a, 5)).toBeLessThanOrEqual(4);
+    expect(count({ 'fore-rib': 'tomahawk' }, 'tomahawk', a, 5)).toBeLessThanOrEqual(4);
+  });
+  it.each(animals)('$breed $sex: one of each whole muscle; ≤ 3 short ribs', (a) => {
+    expect(count({ loin: 'separate', 'loin/fillet': 'whole' }, 'whole-fillet', a)).toBe(1);
+    expect(count({ rump: 'split' }, 'picanha-whole', a)).toBe(1);
+    expect(count({ rump: 'split' }, 'tri-tip', a)).toBe(1);
+    expect(count({ 'thin-flank': 'bavette' }, 'bavette', a)).toBe(1);
+    expect(count({ plate: 'short-ribs' }, 'short-ribs', a)).toBeLessThanOrEqual(3);
+  });
+});
