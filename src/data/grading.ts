@@ -176,7 +176,9 @@ export const AHDB_PER_SIDE_KG = {
  * kidney/pelvic/heart fat and shrunk live weight: Breaker 52–54, Boner 50–52, Lean 45–49, Light 40–46 %.
  * Irish basis removes kidney & pelvic fat before weighing (2017/1182 Art. 6(3); Alberta: US dressing runs
  * 2.5–3.0 points higher for that reason) and uses cold weight = warm − 2 % (≈ 1 point at ~50 %).
- * Irish-basis value = USDA midpoint − 2.75 − 1.0. Validation: Newford beef cull cows (O=4−) 48 %;
+ * Irish-basis value = USDA midpoint − 2.75 − 1.0. USE: only the DIFFERENCES between rows adjust a breed's stored cow
+ * kill-out (which is at its default fat class); the absolute levels run ~3 points below Minchin's measured Irish mean.
+ * Validation: Newford beef cull cows (O=4−) 48 %;
  * Minchin 2009 Irish cull cows (n = 2163, mixed dairy/beef) 324 kg / 699 kg = 46.4 %.
  */
 export const COW_KILLOUT_BY_FAT = {

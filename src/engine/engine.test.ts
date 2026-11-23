@@ -288,3 +288,23 @@ describe('roasts depend on the size of the animal', () => {
     expect(r.balance.fatPoolKg / r.balance.carcassKg).toBeLessThan(0.12);
   });
 });
+
+describe('kill-out', () => {
+  it('at the default grade, kill-out equals the stored breed value for every breed and sex', () => {
+    for (const b of BREEDS)
+      for (const sex of ['steer', 'heifer', 'bull', 'cow'] as Sex[]) {
+        const r = compute(base({ breed: b.id, sex, conformation: undefined, fatClass: undefined }));
+        expect(r.killOutPct, `${b.id} ${sex}`).toBeCloseTo(b.killOutPct[sex].value, 9);
+      }
+  });
+  it('a fatter cow kills out higher; a leaner one lower', () => {
+    const ko = (fatClass: '2' | '3' | '4') => compute(base({ breed: 'jersey', sex: 'cow', fatClass })).killOutPct;
+    expect(ko('2')).toBeLessThan(ko('3'));
+    expect(ko('3')).toBeLessThan(ko('4'));
+  });
+});
+
+it('a light live weight suggests it may be the carcass weight', () => {
+  expect(compute(base({ breed: 'jersey', sex: 'cow', ageMonths: 72, weightKg: 350 })).advisories.some((x) => x.id === 'light-animal')).toBe(true);
+  expect(compute(base({ breed: 'jersey', sex: 'cow', ageMonths: 72, weightKg: 350, weightBasis: 'carcass' })).advisories.some((x) => x.id === 'light-animal')).toBe(false);
+});

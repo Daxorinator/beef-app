@@ -273,6 +273,12 @@ export function compute(state: AppState): EngineResult {
     add({ id: 'grid-clamped', when: {}, severity: 'info', message: 'This grade is outside the AHDB yield grid (conformation U− to P, fat 2 to 4H). The nearest grade in the grid was used, so treat the yield as approximate.', sourceIds: ['ahdb-europ-yield'] });
   if (!grade.fromUser)
     add({ id: 'grade-default', when: {}, severity: 'tip', message: `No grade entered, so the typical ${BREED_BY_ID[a.breed].name} ${a.sex} grade was used (${grade.conformation}${grade.fatClass}). Enter the grade from your kill sheet for a better estimate.` });
+  {
+    // UI heuristic (not a yield figure): flag a carcass well under the typical Irish carcass for this breed and sex.
+    const typical = BREED_BY_ID[a.breed].typicalCarcassKg[a.sex];
+    if (typical && a.weightBasis === 'live' && wholeCarcassKg < typical.value * 0.8)
+      add({ id: 'light-animal', when: {}, severity: 'tip', message: `A ${a.weightKg} kg live weight gives an estimated ${Math.round(wholeCarcassKg)} kg carcass, well below the typical Irish ${BREED_BY_ID[a.breed].name} ${a.sex} carcass of about ${Math.round(typical.value)} kg. If ${a.weightKg} kg is the weight on the kill sheet, switch the weight to "Carcass".`, sourceIds: typical.sourceIds });
+  }
   if (liveIsEstimated)
     add({ id: 'live-estimated', when: {}, severity: 'info', message: `Live weight was estimated from carcass weight at a ${killOut.toFixed(1)} % kill-out. Offal weights are scaled from live weight.` });
   if ((a.sex === 'steer' || a.sex === 'heifer') && a.ageMonths > QPS_SPEC.steer.maxAgeMonths)

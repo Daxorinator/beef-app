@@ -8,7 +8,8 @@ const d = (value: number, sourceIds: string[], note: string): Sourced => ({ valu
 
 // Shared derivation inputs (all sourced):
 //  HF steer 51.6 (Teagasc systems, 620 → 310–330 kg); HF bull 52.2 (mean of 51.9, 52.5); bull − steer = +0.6.
-//  Heifer = steer − 1.75 (Alberta: 1.5–2.0 lower). Cows: COW_KILLOUT_BY_FAT at fat 3 (47.3 % Irish basis).
+//  Heifer = steer − 1.75 (Alberta: 1.5–2.0 lower). Cow values are at the breed's DEFAULT cow fat class; the engine
+//  adjusts only for the difference from that class using COW_KILLOUT_BY_FAT (relative steps, not absolute levels).
 //  Irish cull cows (Minchin 2009, mostly dairy): 46.4 %. Jersey vs Holstein: −5.1 % relative (German bull calves);
 //  Jersey × HF vs HF: −1.0 point (Teagasc 5923), so purebred ≈ −2.0 points vs HF within that study (HF 49.5).
 const BULL_VS_STEER = 0.6;
@@ -23,7 +24,7 @@ export const BREEDS: BreedProfile[] = [
       steer: d(53.4, ['teagasc-newford', 'nz-mpi-dressing'], 'mean of Newford suckler steer kill-outs 2015–2021 (52, 52, 54, 55, 54, 54, 53 %). Cross-check: Irish HF 51.6 % + Angus-vs-Friesian offset +1.5 (NZ trial) to +2.3 (Manawatu, 13,853 Angus steers) = 53.1–53.9 %'),
       heifer: d(52.3, ['teagasc-newford'], 'mean of Newford suckler heifer kill-outs (52, 52, 53, 52, 53, 52 %)'),
       bull: d(55.7, ['finnish-beef-breeds', 'eu-2017-1182'], 'Finnish purebred Angus bulls 56.8 % (warm) less 2 % for cold weight'),
-      cow: d(47.3, ['unl-cull-grades', 'teagasc-newford'], 'cull-cow condition table at fat 3; Newford suckler cull cows measured 48 % at O=4−'),
+      cow: v(48, ['teagasc-newford'], 'Newford suckler cull cows measured 48 % at O=4− (the default cow grade)'),
     },
     defaultConformation: { bull: 'R', steer: 'R', heifer: 'R', cow: 'O' },
     defaultFatClass: { bull: '3-', steer: '3', heifer: '3', cow: '4-' },
@@ -47,7 +48,7 @@ export const BREEDS: BreedProfile[] = [
       steer: d(52.5, ['teagasc-systems', 'keane-2008'], '23 mo early-maturing dairy-calf steer, 610 kg → 310–330 kg (midpoint). Cross-check: Grange trial AA × HF 514 vs HF 501 g/kg (+1.3) → 52.9 % on Irish HF 51.6 %'),
       heifer: d(52.2, ['teagasc-systems'], '19 mo early-maturing dairy-calf heifer, 460 kg → 230–250 kg (midpoint)'),
       bull: d(52.5 + BULL_VS_STEER, ['teagasc-systems'], 'steer value + 0.6 (HF bull − HF steer, Teagasc systems)'),
-      cow: d(47.3, ['unl-cull-grades'], 'cull-cow condition table at fat 3'),
+      cow: d(47.3, ['unl-cull-grades', 'moreira-2021'], 'cull-cow condition table, Boner (fat 3) = the default cow fat class; Irish cull cows measured 46.4 % (Minchin 2009)'),
     },
     defaultConformation: { bull: 'O', steer: 'O', heifer: 'O', cow: 'O-' },
     defaultFatClass: { bull: '3-', steer: '3-', heifer: '3-', cow: '3' },
@@ -67,7 +68,7 @@ export const BREEDS: BreedProfile[] = [
       steer: d(49.0, ['nz-mpi-dressing', 'teagasc-systems'], 'Irish HF steer 51.6 % less 2.6 points: purebred Jersey 48.6 % vs Friesian 51.2 % steers in the same NZ trial (Barton & Pleasants 1997). Cross-checks: Teagasc 5923 linear 47.5 %, German bull calves 47.0 %'),
       heifer: d(49.0 + HEIFER_VS_STEER, ['teagasc-5923', 'alberta-dressing'], 'steer value − 1.75 (heifers 1.5–2.0 lower)'),
       bull: d(49.0 + BULL_VS_STEER, ['nz-mpi-dressing', 'teagasc-systems'], 'steer value + 0.6 (bull − steer, HF)'),
-      cow: d(43.8, ['moreira-2021', 'minchin-2009', 'nz-mpi-dressing', 'nzga-cull-cows', 'jas-cull-jersey-2018'], 'no measured Jersey cow kill-out exists in any source found. Irish cull cows 46.4 % (Minchin 2009, mostly Friesian) less 2.6 points (purebred Jersey vs Friesian steers in the same NZ trial). Cross-checks: NZ cull dairy cows measured 41–44 % (Muir et al.; MPI 42.6 %); US Jersey cull cows have lower body condition than Holstein (7.6 % vs 21.4 % at BCS ≥ 3) and 193.7 vs 285.2 kg hot carcass'),
+      cow: d(43.8, ['moreira-2021', 'minchin-2009', 'nz-mpi-dressing', 'nzga-cull-cows', 'jas-cull-jersey-2018'], 'typical-condition value at the default fat class 2+ (Berry 2018 Jersey cows 6.16 ≈ 2+). No measured Jersey cow kill-out exists in any source found. Irish cull cows 46.4 % (Minchin 2009, mostly Friesian) less 2.6 points (purebred Jersey vs Friesian steers in the same NZ trial). Cross-checks: NZ cull dairy cows measured 41–44 % (Muir et al.; MPI 42.6 %); US Jersey cull cows have lower body condition than Holstein (7.6 % vs 21.4 % at BCS ≥ 3) and 193.7 vs 285.2 kg hot carcass'),
     },
     defaultConformation: { bull: 'P+', steer: 'P+', heifer: 'P+', cow: 'P' },
     defaultFatClass: { bull: '2+', steer: '3-', heifer: '3-', cow: '2+' },
@@ -91,7 +92,7 @@ export const BREEDS: BreedProfile[] = [
       steer: d(51.6, ['teagasc-systems', 'teagasc-kilkenny-hf', 'keane-2008'], '24 mo Friesian steer 620 kg → 310–330 kg; measured: Kilkenny HF steers 50.5 % and 51.7 %, Grange HF steers 50.1 %'),
       heifer: d(51.6 + HEIFER_VS_STEER, ['teagasc-systems', 'alberta-dressing'], 'steer value − 1.75'),
       bull: d(52.2, ['teagasc-systems'], 'mean of U-16 mo (51.9 %) and 18–20 mo (52.5 %) HF bull targets'),
-      cow: s(46.4, ['moreira-2021', 'minchin-2009'], 'Irish cull cows 324 kg / 699 kg (Minchin 2009, n = 2163, mostly Friesian)'),
+      cow: s(46.4, ['moreira-2021', 'minchin-2009'], 'Irish cull cows 324 kg / 699 kg (Minchin 2009, n = 2163, mostly Friesian) — a typical-condition average; Irish HF cows typically grade fat 2+ (Berry 2018), the default'),
     },
     defaultConformation: { bull: 'O', steer: 'O-', heifer: 'O-', cow: 'P' },
     defaultFatClass: { bull: '2+', steer: '2+', heifer: '3', cow: '2+' },
@@ -114,7 +115,7 @@ export const BREEDS: BreedProfile[] = [
       steer: d(52.5, ['teagasc-systems', 'nz-mpi-dressing'], 'early-maturing dairy-calf steer target. Cross-check: HF 51.6 % + half the Hereford-vs-Friesian offset (+2.0 Manawatu to +2.9 NZ trial) = 52.6–53.1 %'),
       heifer: v(49.3, ['teagasc-heifer'], '497 kg → 245 kg, O−4− (Teagasc home-kill heifer, single animal)'),
       bull: d(52.5 + BULL_VS_STEER, ['teagasc-systems'], 'steer value + 0.6'),
-      cow: d(47.3, ['unl-cull-grades'], 'cull-cow condition table at fat 3'),
+      cow: d(47.3, ['unl-cull-grades', 'moreira-2021'], 'cull-cow condition table, Boner (fat 3) = the default cow fat class; Irish cull cows measured 46.4 % (Minchin 2009)'),
     },
     defaultConformation: { bull: 'O+', steer: 'O+', heifer: 'O-', cow: 'O-' },
     defaultFatClass: { bull: '3-', steer: '3+', heifer: '4-', cow: '3' },
@@ -134,7 +135,7 @@ export const BREEDS: BreedProfile[] = [
       steer: d(54.2, ['teagasc-systems'], '20 mo suckler steer 590 kg → 310–330 kg (midpoint)'),
       heifer: d(54.0, ['teagasc-systems'], '20 mo suckler heifer 565 kg → 290–320 kg (midpoint)'),
       bull: d(58.1, ['teagasc-systems'], 'mean of suckler bull systems 57.1, 59.2, 57.9 %'),
-      cow: d(47.3, ['unl-cull-grades', 'minchin-2009'], 'cull-cow condition table at fat 3; late-maturing-sired cull cows met the Irish target spec most often (53 %)'),
+      cow: d(47.3, ['unl-cull-grades', 'minchin-2009'], 'cull-cow condition table, Boner (fat 3) = the default cow fat class; late-maturing-sired cull cows met the Irish target spec most often (53 %)'),
     },
     defaultConformation: { bull: 'U', steer: 'R+', heifer: 'R+', cow: 'O+' },
     defaultFatClass: { bull: '2+', steer: '3', heifer: '3+', cow: '3' },

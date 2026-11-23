@@ -21,13 +21,16 @@ export function effectiveGrade(a: Animal): Grade {
   };
 }
 
-/** Kill-out % for the animal. Cows are adjusted from the fat-3 ("Boner") value by body condition. */
+/**
+ * Kill-out % for the animal. Stored values are at the breed/sex default grade. Cows whose fat class differs from the
+ * default are adjusted by the step between the two body-condition rows of COW_KILLOUT_BY_FAT.
+ */
 export function killOutPct(a: Animal, grade = effectiveGrade(a)): number {
-  const base = BREED_BY_ID[a.breed].killOutPct[a.sex].value;
+  const breed = BREED_BY_ID[a.breed];
+  const base = breed.killOutPct[a.sex].value;
   if (a.sex !== 'cow') return base;
-  const boner = COW_KILLOUT_BY_FAT.usdaGrades.find((g) => g.grade === 'Boner')!.irishPct;
-  const row = COW_KILLOUT_BY_FAT.usdaGrades.find((g) => g.fatClasses.includes(grade.fatClass))!;
-  return base + (row.irishPct - boner);
+  const rowOf = (f: FatClass) => COW_KILLOUT_BY_FAT.usdaGrades.find((g) => g.fatClasses.includes(f))!.irishPct;
+  return base + rowOf(grade.fatClass) - rowOf(breed.defaultFatClass.cow);
 }
 
 export function carcassAndLive(a: Animal): { carcassKg: number; liveKg: number; killOut: number; liveIsEstimated: boolean } {

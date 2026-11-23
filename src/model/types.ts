@@ -89,8 +89,8 @@ export interface BreedProfile {
   name: string;
   type: 'beef-early-maturing' | 'beef-late-maturing' | 'dairy' | 'dairy-x-beef';
   /**
-   * Kill-out % (cold carcass, EU reference presentation / live weight). For cows this is the value at
-   * fat class 3 ("Boner" condition); COW_KILLOUT_BY_FAT in grading.ts gives the condition adjustment.
+   * Kill-out % (cold carcass, EU reference presentation / live weight), at the default grade for that sex. For cows,
+   * COW_KILLOUT_BY_FAT in grading.ts adjusts for a fat class other than the default (relative steps only).
    */
   killOutPct: Record<Sex, Sourced>;
   defaultConformation: Record<Sex, Conformation>;
