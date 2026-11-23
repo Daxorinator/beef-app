@@ -67,7 +67,7 @@ export const BREEDS: BreedProfile[] = [
       steer: d(49.0, ['nz-mpi-dressing', 'teagasc-systems'], 'Irish HF steer 51.6 % less 2.6 points: purebred Jersey 48.6 % vs Friesian 51.2 % steers in the same NZ trial (Barton & Pleasants 1997). Cross-checks: Teagasc 5923 linear 47.5 %, German bull calves 47.0 %'),
       heifer: d(49.0 + HEIFER_VS_STEER, ['teagasc-5923', 'alberta-dressing'], 'steer value − 1.75 (heifers 1.5–2.0 lower)'),
       bull: d(49.0 + BULL_VS_STEER, ['nz-mpi-dressing', 'teagasc-systems'], 'steer value + 0.6 (bull − steer, HF)'),
-      cow: d(44.0, ['moreira-2021', 'minchin-2009', 'jersey-bull-calves'], 'Irish cull cows 46.4 % (Minchin 2009, mostly dairy) less 5.1 % relative for Jersey'),
+      cow: d(43.8, ['moreira-2021', 'minchin-2009', 'nz-mpi-dressing', 'nzga-cull-cows', 'jas-cull-jersey-2018'], 'no measured Jersey cow kill-out exists in any source found. Irish cull cows 46.4 % (Minchin 2009, mostly Friesian) less 2.6 points (purebred Jersey vs Friesian steers in the same NZ trial). Cross-checks: NZ cull dairy cows measured 41–44 % (Muir et al.; MPI 42.6 %); US Jersey cull cows have lower body condition than Holstein (7.6 % vs 21.4 % at BCS ≥ 3) and 193.7 vs 285.2 kg hot carcass'),
     },
     defaultConformation: { bull: 'P+', steer: 'P+', heifer: 'P+', cow: 'P' },
     defaultFatClass: { bull: '2+', steer: '3-', heifer: '3-', cow: '2+' },

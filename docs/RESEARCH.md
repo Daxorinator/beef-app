@@ -712,5 +712,31 @@ Sources: Irish Butchers' Guild <https://irishbutchersguild.com/beef/>, grassfed.
 | Indoor-finished side: fat (g/kg) | 136 | 149 | 86 |
 | Indoor-finished side: bone (g/kg) | 224 | 198 | 193 |
 
+### 10.8 Jersey cow kill-out: dedicated search (2026-11-23)
+
+**Searched:**
+- English: Irish, NZ, Australian, US, Danish and Brazilian literature.
+- Danish (SEGES / LandbrugsAvisen) and Portuguese (SciELO) sources.
+- USDA market reports and the NZ MPI review.
+
+**Result: no measured Jersey cow kill-out exists in any source found.**
+
+**Closest measured evidence:**
+- **NZ cull dairy cows** (Muir et al., NZGA): DO% 43.9 / 42.4 / 41.4 % by year on unfasted on-farm live weight. The cows were 65 % Friesian, 27 % crossbred ("Kiwi") and 7.6 % Jersey, with no kill-out reported by breed. MPI's national NZ cull-cow figure is 42.6 %.
+- **Irish cull cows** (Minchin 2009, n = 2,163, mostly Friesian): 46.4 %.
+- **US cull cows** (J Anim Sci 2018 abstract; 734 Holstein, 1,234 Jersey):
+  - Hot carcass: Holstein 285.2 kg, Jersey 193.7 kg.
+  - Share at BCS ≥ 3: Holstein 21.4 %, Jersey 7.6 %.
+  - 12th-rib fat: Holstein 0.27 cm, Jersey 0.21 cm.
+  - Ribeye area: Holstein 47.0 cm², Jersey 44.1 cm².
+  - No live weights reported.
+- **Irish Jersey cow carcass** (Berry 2018): 204.3 kg vs 280.1 kg for Holstein-Friesian.
+- **Non-cited calculator sites** quote 42–44 % and 45–52 % for Jersey. These were not used.
+
+**Value used:**
+- 43.8 %, derived as Irish cull-cow 46.4 % less the 2.6-point purebred Jersey vs Friesian offset (same-trial NZ steers).
+- Consistent with the NZ measured cull dairy range of 41–44 %.
+- Best way to firm it up: real Irish dockets for Jersey cows, with a mart or farm live weight and the factory carcass weight.
+
 ### 10.7 Still blocked
 - None of the four requested papers. All were supplied and read.
