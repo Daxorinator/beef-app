@@ -64,3 +64,11 @@ export function saveState(s: AppState): void {
     // Private mode / storage disabled: the app still works, it just won't remember.
   }
 }
+
+export function clearSaved(): void {
+  try {
+    localStorage.removeItem(KEY);
+  } catch {
+    // nothing to clear
+  }
+}

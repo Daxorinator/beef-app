@@ -15,7 +15,8 @@ function MassBar({ r }: { r: EngineResult }) {
   const segs = [
     { k: 'meat', label: 'Take-home meat', v: b.meatKg },
     { k: 'bone', label: 'Bone (not in cuts)', v: b.marrowKg + b.soupBoneKg },
-    { k: 'fat', label: 'Fat & trimmings', v: Math.max(0, b.fatPoolKg) },
+    { k: 'fat', label: 'Fat trim', v: Math.max(0, b.fatPoolKg) },
+    { k: 'trim', label: 'Extra trim & waste (craft butcher)', v: b.butcherTrimKg },
     { k: 'loss', label: 'Hanging & cutting loss', v: b.hangingLossKg + b.cuttingLossKg },
   ];
   return (
@@ -87,7 +88,7 @@ export function ResultsStep({ state, result: r, shareUrl }: { state: AppState; r
                     <td className="from">{l.regionName}</td>
                     <td className="num">{kg(l.weightKg)}</td>
                     <td className="num">{l.weightOnly ? <span className="opt" title="No sourced piece size: sold by weight">by wt</span> : l.count ?? '—'}</td>
-                    <td className="num">{l.eachKg && !l.weightOnly ? weight(l.eachKg) : '—'}</td>
+                    <td className="num">{l.eachKg && !l.weightOnly ? weight(l.eachKg) : '—'}{l.feeds ? <span className={`opt${l.undersized ? ' short' : ''}`}> · feeds {l.feeds}</span> : null}</td>
                     <td className="num">{l.thicknessCm ? `${l.thicknessCm} cm` : '—'}</td>
                     <td className="num">{l.packs ?? '—'}{l.perPack && l.perPack > 1 ? <span className="opt"> ×{l.perPack}</span> : null}</td>
                     <td><CookBadges cookingId={l.cookingId} /><span className="cook-tip">{COOKING_BY_ID[l.cookingId]?.methods.slice(0, 2).join(', ').replace(/-/g, ' ')}</span></td>

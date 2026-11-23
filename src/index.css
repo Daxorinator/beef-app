@@ -22,6 +22,7 @@
   --seg-bone: #e9dfcf;
   --seg-fat: #f2d48c;
   --seg-loss: #9fb3c4;
+  --seg-trim: #c9a6a0;
 
   --ok: #2f6b3a;
   --warn: #a85b00;
@@ -62,6 +63,7 @@
     --seg-bone: #6b6259;
     --seg-fat: #b9993f;
     --seg-loss: #5c7389;
+    --seg-trim: #7d5a55;
     --ok: #6fbf7c;
     --warn: #f0a44b;
     --bad: #f07a6e;
@@ -249,6 +251,7 @@ button.link { background: none; border: 0; color: var(--accent); cursor: pointer
 .seg-bone { background: var(--seg-bone); }
 .seg-fat { background: var(--seg-fat); }
 .seg-loss { background: var(--seg-loss); }
+.seg-trim { background: var(--seg-trim); }
 .massbar figcaption { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 6px; font-size: 0.82rem; color: var(--ink-2); }
 .table-wrap { overflow-x: auto; }
 table.products { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
@@ -256,6 +259,7 @@ table.products { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
 .products thead th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-3); font-weight: 600; }
 .products tr.group th { background: var(--surface-2); font-family: var(--serif); font-size: 0.95rem; }
 .products .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.products .opt.short { color: var(--warn); }
 .products .from { color: var(--ink-3); font-size: 0.82rem; }
 .extras-summary { columns: 2 260px; padding-left: 18px; font-size: 0.9rem; }
 .results > section, .results > details { margin-top: 16px; }
@@ -276,6 +280,7 @@ table.products { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
 .nav-foot { display: flex; justify-content: space-between; margin-top: 20px; }
 .nav-foot button:disabled { opacity: 0.4; cursor: default; }
 .nav-foot .primary, .actions button:first-child { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.primary-btn { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px; padding: 10px 16px; font-weight: 600; cursor: pointer; }
 .disclaimer { color: var(--ink-3); font-size: 0.78rem; text-align: center; margin-top: 24px; }
 
 @media (max-width: 900px) {
