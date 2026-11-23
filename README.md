@@ -1,32 +1,25 @@
-# React + TypeScript + Vite
+# Beef Cut Planner
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Plan how a beef animal is butchered in Ireland: pick cuts on an interactive diagram, see the estimated yield, steak and joint counts, offal and bones, cooking methods, and print a cut sheet for your butcher.
 
-Currently, two official plugins are available:
+Client-only React + TypeScript (Vite). No backend; state is saved in the browser and can be shared as a link.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Develop
 
-## React Compiler
+Requires Node 22 (see `.nvmrc`).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```sh
+npm install
+npm run dev      # http://localhost:5173
+npm test         # data integrity + engine invariants
+npm run lint
+npm run build    # → dist/ (static; deploy to Cloudflare Pages with build command `npm run build`, output `dist`)
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Layout
+
+- `src/data/`: researched constants only, every figure with its source (`sources.ts`). See `docs/RESEARCH.md`.
+- `src/engine/`: pure calculation: kill-out → carcass → grade-based meat/fat/bone (AHDB EUROP grid) → regions (AHDB Beef Yield Guide shares) → products, trim, bone and fat pools, parts, advisories, cut sheet.
+- `src/ui/`: the five steps (Animal, Cuts, Offal & extras, Packing, Results) and the SVG cow diagram.
+
+Tests check that the mass balance closes for every breed, sex, share, hanging time and cut option. They also check the AHDB reference grade, the exclusions and SRM rules, and the Teagasc home-kill comparison.
