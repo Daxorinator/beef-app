@@ -448,6 +448,8 @@ export function compute(state: AppState): EngineResult {
   for (const { plan } of loinPlans) {
     if (plan.clamped.length)
       add({ id: 'loin-clamped', when: {}, severity: 'warning', message: `Loin plan adjusted to fit: ${plan.clamped.join('; ')}. Thicker steaks or a fillet kept whole leave room for fewer T-bones.` });
+    if (plan.sides.some((s) => s.reservation === 'centre' && s.tBones > 0))
+      add({ id: 'tbone-centre-estimate', when: {}, severity: 'warning', message: 'T-bones next to a Wellington are an estimate. Nobody measures how far back T-bones can be cut before reaching the thick centre fillet, so the planner allows at most 2 per side from the very front. Ask your butcher: they may get fewer (or none) without spoiling the Wellington.' });
     if (plan.used.tbones > 0 && a.breed === 'jersey')
       add({ id: 't-bone-small', when: {}, severity: 'tip', message: 'Jersey loins are small: T-bones will be modest in size. Consider 1¼" or thicker.', sourceIds: ['teagasc-5923'] });
   }

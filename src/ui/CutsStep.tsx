@@ -156,7 +156,7 @@ function LoinPicker({ plan, lines, onChange }: { plan: LoinPlan; lines: Line[]; 
   const rows: { key: keyof typeof u; label: string; hint: string; max: number; ids: string[] }[] = [
     { key: 'tbones', label: 'T-bones & porterhouses', hint: 'On the bone, cut from the front of the short loin (T-bones first, then porterhouses).', max: plan.max.onBone, ids: ['t-bone', 'porterhouse'] },
     { key: 'wholeFillets', label: 'Whole fillets', hint: 'For roasting or a large Wellington. Needs a side with no T-bones.', max: plan.max.wholeFillets, ids: ['whole-fillet'] },
-    { key: 'centreFillets', label: 'Centre fillets (Wellington / chateaubriand)', hint: 'The thick centre kept whole. That side can still give a few T-bones from the front.', max: plan.max.centreFillets, ids: ['chateaubriand'] },
+    { key: 'centreFillets', label: 'Centre fillets (Wellington / chateaubriand)', hint: 'The thick centre kept whole. That side gives at most 2 T-bones from the very front (an estimate; check with your butcher).', max: plan.max.centreFillets, ids: ['chateaubriand'] },
     { key: 'sirloinRoasts', label: 'Sirloin joints', hint: '', max: plan.max.sirloinRoasts, ids: ['sirloin-roast', 'wing-rib'] },
   ];
   return (
@@ -178,6 +178,11 @@ function LoinPicker({ plan, lines, onChange }: { plan: LoinPlan; lines: Line[]; 
                 s.reservation === 'whole' ? 'whole fillet' : s.reservation === 'centre' ? 'centre fillet kept whole' : 'rest of fillet as steaks',
               ].filter(Boolean).join(' · ')}
             </span>
+            {s.reservation === 'centre' && s.tBones > 0 && (
+              <span className="flag" title="How far back T-bones can go before cutting into the centre fillet is not measured; the planner is deliberately conservative. Confirm with your butcher.">
+                ⚠ T-bones here are an estimate: ask your butcher
+              </span>
+            )}
           </div>
         ))}
       </div>

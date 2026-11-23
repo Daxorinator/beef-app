@@ -1,6 +1,6 @@
 // Loin planner: T-bones / porterhouses, whole or centre fillets, sirloin joints, and the rest as steaks — placed on
 // each side so the anatomy allows it. Pure functions.
-import { LOIN_BONE, LOIN_PER_SIDE_KG as K, LOIN_PRODUCTS as P, LOIN_YIELDS as Y, TAIL_SECTION_OF_SHORT_LOIN, WING_SHARE_OF_STRIPLOIN } from '../data/loin';
+import { CENTRE_SIDE_TBONE_MAX, CENTRE_SIDE_TBONE_SECTION, LOIN_BONE, LOIN_PER_SIDE_KG as K, LOIN_PRODUCTS as P, LOIN_YIELDS as Y, TAIL_SECTION_OF_SHORT_LOIN, WING_SHARE_OF_STRIPLOIN } from '../data/loin';
 import type { ProductSpec } from '../model/types';
 
 export interface LoinRequest {
@@ -44,6 +44,8 @@ export interface LoinPlan {
 interface SideCaps {
   front: number;
   rear: number;
+  /** T-bones allowed on a side keeping its centre fillet whole: deliberately conservative (an estimate). */
+  centre: number;
 }
 
 /**
@@ -70,8 +72,10 @@ export function planLoin(req: LoinRequest, loinKg: number, sides: number, tBoneK
   // Raw lean one on-bone steak uses: its lean (weight ÷ bone factor) ÷ steak yield.
   const tRaw = tBoneKg / LOIN_BONE.tBone / Y.steak;
   const pRaw = porterKg / LOIN_BONE.porterhouse / Y.steak;
-  const caps: SideCaps = { front: Math.floor(frontRaw / tRaw), rear: Math.floor(rearRaw / pRaw) };
-  const capOf = (r: Reservation) => (r === 'whole' ? 0 : r === 'centre' ? caps.front : caps.front + caps.rear);
+  const front = Math.floor(frontRaw / tRaw);
+  const centreSide = Math.min(front, CENTRE_SIDE_TBONE_MAX.value, Math.floor((lumbar * CENTRE_SIDE_TBONE_SECTION.value + tail) / tRaw));
+  const caps: SideCaps = { front, rear: Math.floor(rearRaw / pRaw), centre: centreSide };
+  const capOf = (r: Reservation) => (r === 'whole' ? 0 : r === 'centre' ? caps.centre : caps.front + caps.rear);
   const capacity = (w: number, c: number) => (sides - w - c) * capOf('none') + c * capOf('centre');
 
   const clamped: string[] = [];
@@ -112,7 +116,7 @@ export function planLoin(req: LoinRequest, loinKg: number, sides: number, tBoneK
   };
   fill(unreserved, 'tBones', caps.front);
   fill(unreserved, 'porterhouses', caps.rear);
-  fill(centre, 'tBones', caps.front);
+  fill(centre, 'tBones', caps.centre);
 
   // ── Per side → pools ──
   let tBoneLean = 0, porterLean = 0, sirloinRaw = 0, wingRaw = 0, filletSteakRaw = 0, tailRaw = 0, tailPieces = 0, trim = 0;
@@ -187,7 +191,9 @@ export function loinInstructions(plan: LoinPlan): string[] {
   return plan.sides.map((s, i) => {
     const bits: string[] = [];
     const onBone = s.tBones + s.porterhouses;
-    if (onBone) {
+    if (onBone && s.reservation === 'centre')
+      bits.push(`cut at most ${s.tBones} T-bone${s.tBones > 1 ? 's' : ''} from the very front of the short loin, stopping before the centre fillet (fewer if the fillet is already thickening — your call); then take out the rest of the fillet`);
+    else if (onBone) {
       const what = [s.tBones ? `${s.tBones} T-bone${s.tBones > 1 ? 's' : ''}` : '', s.porterhouses ? `${s.porterhouses} porterhouse${s.porterhouses > 1 ? 's' : ''}` : ''].filter(Boolean).join(' then ');
       bits.push(`cut ${what} from the front of the short loin`);
       bits.push(onBone && s.reservation !== 'whole' ? 'then take out the rest of the fillet' : '');

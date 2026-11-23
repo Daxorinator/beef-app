@@ -27,6 +27,14 @@ export const WING_SHARE_OF_STRIPLOIN: Sourced = d(3 / 9, ['ahdb-yield-guide'], '
  */
 export const TAIL_SECTION_OF_SHORT_LOIN: Sourced = d(1 / 3, ['ahdb-yield-guide'], 'estimate from anatomy: fillet tail under roughly the front 2 of 6 lumbar vertebrae (AHDB splits the fillet into tail, middle and head by weight only)');
 
+/**
+ * Conservative limits for T-bones on a side whose centre fillet is kept whole (Wellington / chateaubriand). How far back
+ * T-bones can go before cutting into the centre fillet is not measured anywhere, so the planner deliberately allows
+ * only the first lumbar vertebra's worth, and never more than 2 per side. The user is told to confirm with the butcher.
+ */
+export const CENTRE_SIDE_TBONE_SECTION: Sourced = d(1 / 6, ['ahdb-yield-guide'], 'deliberately conservative estimate: only the front 1 of 6 lumbar vertebrae (half of TAIL_SECTION_OF_SHORT_LOIN) when the centre fillet must stay whole');
+export const CENTRE_SIDE_TBONE_MAX: Sourced = d(2, ['ahdb-yield-guide'], 'deliberately conservative hard cap per side, pending the butcher\'s own judgement');
+
 export const LOIN_YIELDS = {
   /** Strip-loin → steaks 83.9–85.3 % (Texas A&M); applied to T-bones, porterhouses and sirloin steaks. */
   steak: 0.85,

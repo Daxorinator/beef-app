@@ -218,6 +218,7 @@ button.link { background: none; border: 0; color: var(--accent); cursor: pointer
 .quick-fill .chip { font-size: 0.8rem; padding: 3px 10px; }
 .loin-sides { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 6px; margin: 6px 0 10px; }
 .loin-side { background: var(--surface-2); border-radius: 8px; padding: 6px 10px; font-size: 0.85rem; display: flex; flex-direction: column; }
+.loin-side .flag { margin-top: 4px; font-size: 0.78rem; color: var(--warn, #9a5b00); font-weight: 600; }
 .rib-strip { display: flex; gap: 3px; margin: 6px 0 10px; }
 .rib-strip span { flex: 1; height: 22px; border-radius: 4px; }
 .alloc-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }

@@ -474,6 +474,16 @@ describe('loin planner', () => {
     expect(whole.used.tbones).toBe(0);
     expect(whole.clamped.length).toBe(1);
   });
+  it('T-bones beside a centre fillet are capped conservatively and flagged', () => {
+    for (const share of ['whole', 'half'] as const) {
+      const r = plan({ centreFillets: 2, tbones: 99 }, share);
+      for (const s of r.loinPlans[0].plan.sides) expect(s.tBones).toBeLessThanOrEqual(2);
+      if (r.loinPlans[0].plan.used.tbones > 0) expect(r.advisories.some((a) => a.id === 'tbone-centre-estimate')).toBe(true);
+      closes(r);
+    }
+    // no flag when T-bones come only from unreserved sides
+    expect(plan({ tbones: 2, centreFillets: 1 }).advisories.some((a) => a.id === 'tbone-centre-estimate')).toBe(false);
+  });
   it('2 centre fillets on a half share is clamped to 1, with a notice', () => {
     const r = plan({ centreFillets: 2 }, 'half');
     expect(r.loinPlans[0].plan.used.centreFillets).toBe(1);
