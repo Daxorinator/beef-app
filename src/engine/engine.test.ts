@@ -43,8 +43,9 @@ describe('grade scaling', () => {
   });
   it('reference grade (R4H) at 14 days: meat = grid saleable 68.7 − hanging loss', () => {
     const c = composition({ conformation: 'R', fatClass: '4+', fromUser: true }, 14);
-    expect(c.meatPct).toBeCloseTo(68.7 - hangingLossPctOfCold(14), 9);
-    expect(c.fatPct).toBeCloseTo(13.2, 9);
+    expect(c.commercialMeatPct).toBeCloseTo(68.7 - hangingLossPctOfCold(14), 9);
+    expect(c.meatPct).toBeLessThan(c.commercialMeatPct);
+    expect(c.fatPct).toBeCloseTo(13.2 + c.homeTrimPct, 9);
     expect(c.boneFactor).toBeCloseTo(1, 9);
     expect(c.meatPct + c.fatPct + c.bonePct + c.hangingLossPct + c.cuttingLossPct).toBeCloseTo(100, 9);
     expect(c.gridClamped).toBe(false);
@@ -67,7 +68,7 @@ describe('reference distribution (AHDB Yield Guide shares)', () => {
     const topside = r.lines.find((l) => l.productId === 'topside-roast')!;
     const regionPlusTrimKg = (303 * YG_MEAT_PCT) / 100 * r.comp.meatFactor;
     expect(topside.weightKg / 0.95 / regionPlusTrimKg).toBeCloseTo(6.53 / YG_MEAT_PCT, 9);
-    expect(regionPlusTrimKg).toBeCloseTo((303 * (68.7 - hangingLossPctOfCold(14))) / 100, 9);
+    expect(regionPlusTrimKg).toBeCloseTo((303 * r.comp.meatPct) / 100, 9);
   });
   it('kill-out is bypassed when carcass weight is entered', () => {
     expect(compute(reference()).balance.carcassKg).toBe(303);
@@ -213,8 +214,8 @@ describe('advisories', () => {
   });
 });
 
-describe('Teagasc home-kill heifer comparison (report, not a fit)', () => {
-  it('AHDB commercial basis overshoots the home-butcher result by roughly 7–10 points', () => {
+describe('Teagasc home-kill heifer comparison (check, not a fit)', () => {
+  it('commercial basis is 7–10 points high; the realistic estimate lands near the actual 143.2 kg', () => {
     const c = HOME_KILL_CALIBRATION;
     const r = compute(
       base(
@@ -222,13 +223,13 @@ describe('Teagasc home-kill heifer comparison (report, not a fit)', () => {
         { selections: { loin: 't-bone', 'fore-rib': 'on-bone', topside: 'split' } },
       ),
     );
-    const enginePct = (r.balance.meatKg / c.carcassKg) * 100;
-    const actualPct = (c.meatKg / c.carcassKg) * 100;
-    const gap = enginePct - actualPct;
-    console.info(`Teagasc heifer: engine ${r.balance.meatKg.toFixed(1)} kg (${enginePct.toFixed(1)} %), actual ${c.meatKg} kg (${actualPct.toFixed(1)} %), gap ${gap.toFixed(1)} pts; low band ${r.balance.meatRangeKg[0].toFixed(1)} kg`);
+    const [realistic, commercial] = r.balance.meatRangeKg;
+    const gap = ((commercial - c.meatKg) / c.carcassKg) * 100;
+    console.info(`Teagasc heifer: realistic ${realistic.toFixed(1)} kg, commercial ${commercial.toFixed(1)} kg, actual ${c.meatKg} kg, commercial gap ${gap.toFixed(1)} pts`);
     expect(gap).toBeGreaterThan(3);
     expect(gap).toBeLessThan(14);
-    expect(r.balance.meatRangeKg[0]).toBeLessThan(c.meatKg * 1.06);
+    expect(Math.abs(realistic - c.meatKg) / c.meatKg).toBeLessThan(0.05);
+    expect(r.balance.meatKg).toBe(realistic);
   });
 });
 
@@ -249,5 +250,20 @@ describe('primal / trim split agrees with the AHDB 2010 grid', () => {
         const gridShare = (AHDB_GRID.trimmedPrimalPct[i][j] / AHDB_GRID.saleableYieldPct[i][j]) * 100;
         expect(Math.abs(ygPrimalShare - gridShare), `${AHDB_GRID.confRows[i]} ${AHDB_GRID.fatCols[j]}`).toBeLessThan(2);
       }
+  });
+});
+
+describe('steak thickness drives the count', () => {
+  it('thicker steaks: fewer, heavier, same total weight', () => {
+    const at = (cm: number) => compute(base({}, { selections: { 'fore-rib': 'ribeye' }, prefs: { ...DEFAULT_PREFS, steakThicknessCm: cm } })).lines.find((l) => l.productId === 'ribeye-steak')!;
+    const thin = at(2);
+    const thick = at(4);
+    expect(thick.count!).toBeLessThan(thin.count!);
+    expect(thick.eachKg!).toBeGreaterThan(thin.eachKg!);
+    expect(thick.weightKg).toBeCloseTo(thin.weightKg, 9);
+  });
+  it('a per-cut override beats the standard thickness', () => {
+    const r = compute(base({}, { selections: { 'fore-rib': 'ribeye' }, prefs: { ...DEFAULT_PREFS, thicknessOverrides: { 'ribeye-steak': 4 } } }));
+    expect(r.lines.find((l) => l.productId === 'ribeye-steak')!.thicknessCm).toBe(4);
   });
 });

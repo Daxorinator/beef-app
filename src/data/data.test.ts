@@ -5,7 +5,7 @@ import { ADVISORIES } from './advisories';
 import { BREEDS } from './breeds';
 import { COOKING_BY_ID } from './cooking';
 import { AHDB_PER_SIDE_KG as K, AHDB_REFERENCE_CARCASS } from './grading';
-import { CUTTING_LOSS_PCT, DICED_LEAN_PCT, FREEZER_LITRES_PER_KG, HOME_BUTCHER_LOW_FACTOR, TRIM_POOL_LEAN_PCT } from './model-constants';
+import { CUTTING_LOSS_PCT, DICED_LEAN_PCT, FREEZER_LITRES_PER_KG, HOME_BUTCHER_FACTOR, TRIM_POOL_LEAN_PCT } from './model-constants';
 import { PART_BY_ID, PARTS } from './parts';
 import { REFERENCE_BONE_PCT, REFERENCE_FAT_PCT, REGION_BY_ID, REGIONS, TRIM_POOL_PCT_OF_CARCASS } from './regions';
 import { SOURCE_BY_ID } from './sources';
@@ -29,7 +29,7 @@ const sourced: Sourced[] = [
   REFERENCE_FAT_PCT,
   CUTTING_LOSS_PCT,
   FREEZER_LITRES_PER_KG,
-  HOME_BUTCHER_LOW_FACTOR,
+  HOME_BUTCHER_FACTOR,
   TRIM_POOL_LEAN_PCT,
   DICED_LEAN_PCT,
 ];

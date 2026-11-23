@@ -3,7 +3,7 @@ import { ADVISORIES } from '../data/advisories';
 import { BREED_BY_ID } from '../data/breeds';
 import { COOKING_BY_ID } from '../data/cooking';
 import { PART_BY_ID } from '../data/parts';
-import { FREEZER_LITRES_PER_KG, HOME_BUTCHER_LOW_FACTOR, DICED_LEAN_PCT, TRIM_POOL_LEAN_PCT } from '../data/model-constants';
+import { FREEZER_LITRES_PER_KG, DICED_LEAN_PCT, TRIM_POOL_LEAN_PCT } from '../data/model-constants';
 import { QPS_SPEC } from '../data/grading';
 import { REGION_BY_ID, TRIM_POOL_PCT_OF_CARCASS } from '../data/regions';
 import type { Advisory, ButcherPrefs, MassBalance, ProductLine, ProductSpec } from '../model/types';
@@ -313,7 +313,7 @@ export function compute(state: AppState): EngineResult {
       fatReturnedKg,
       cuttingLossKg,
       meatKg,
-      meatRangeKg: [meatKg * HOME_BUTCHER_LOW_FACTOR.value, meatKg],
+      meatRangeKg: [meatKg, meatKg * (comp.commercialMeatPct / comp.meatPct)],
       marrowKg,
       soupBoneKg,
       boneInCutsKg,

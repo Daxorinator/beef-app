@@ -6,7 +6,6 @@ import type { EngineResult, Line } from './compute';
 import type { AppState } from './state';
 
 const kg = (x: number) => `${x.toFixed(1)} kg`;
-const kgRange = (lo: number, hi: number) => `${lo.toFixed(1)}–${hi.toFixed(1)} kg`;
 
 const REGULATORY_IDS = new Set(['ie-negligible-bse', 'srm-over-12', 'mince-freshness', 'chill-before-cutting', 'organic-chain', 'organic-handling', 'organic-uncovered', 'on-farm-route']);
 
@@ -104,7 +103,7 @@ export function cutSheetText(cs: CutSheet, r: EngineResult): string {
     for (const i of s.instructions) out.push(`  • ${i}`);
     out.push('');
   }
-  out.push(`Estimated take-home meat: ${kgRange(r.balance.meatRangeKg[0], r.balance.meatRangeKg[1])}`);
+  out.push(`Estimated take-home meat: about ${kg(r.balance.meatKg)} (up to ${kg(r.balance.meatRangeKg[1])} with commercial-style trimming)`);
   if (cs.regulatoryNotes.length) {
     out.push('', 'NOTES');
     for (const n of cs.regulatoryNotes) out.push(`  • ${n}`);

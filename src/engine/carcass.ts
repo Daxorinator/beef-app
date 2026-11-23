@@ -1,7 +1,7 @@
 // Live weight → carcass → composition (meat / fat / bone / losses). Pure functions.
 import { BREED_BY_ID } from '../data/breeds';
 import { AHDB_GRID, AHDB_REFERENCE_CARCASS, CONFORMATION_SCORE, COW_KILLOUT_BY_FAT, FAT_SCORE } from '../data/grading';
-import { CUTTING_LOSS_PCT, hangingLossPctOfCold, REFERENCE_GRADE_SCORES, REFERENCE_HANGING_DAYS } from '../data/model-constants';
+import { CUTTING_LOSS_PCT, hangingLossPctOfCold, HOME_BUTCHER_FACTOR, REFERENCE_GRADE_SCORES, REFERENCE_HANGING_DAYS } from '../data/model-constants';
 import { REFERENCE_BONE_PCT, REFERENCE_FAT_PCT, REGION_BY_ID } from '../data/regions';
 import type { Animal, Conformation, FatClass } from '../model/types';
 
@@ -84,13 +84,19 @@ export interface Composition {
   bonePct: number;
   hangingLossPct: number;
   cuttingLossPct: number;
+  /** Realistic (home-butcher) take-home meat, % of carcass. */
   meatPct: number;
+  /** Commercial-boning meat (AHDB grid), % of carcass: the upper bound. */
+  commercialMeatPct: number;
+  /** Extra trimming by a craft butcher (commercial − realistic), included in fatPct. */
+  homeTrimPct: number;
   gridClamped: boolean;
 }
 
 /**
  * Level basis: AHDB 2010 EUROP grid at the animal's grade (commercial boning 24–72 h, so no maturation loss yet).
- *  meat = saleable S − hanging loss; fat = fat trim T; bone pool = bone & waste (100 − S − T) less the cutting loss it
+ *  commercial meat = saleable S − hanging loss; realistic meat = commercial × HOME_BUTCHER_FACTOR (the rest is extra
+ *  trim, added to fat); fat = fat trim T; bone pool = bone & waste (100 − S − T) less the cutting loss it
  *  contains (cutting waste is already in the grid's bone & waste, since the grid was measured after commercial boning).
  */
 export function composition(grade: Grade, hangingDays: number): Composition {
@@ -102,11 +108,13 @@ export function composition(grade: Grade, hangingDays: number): Composition {
   const refT = gridValue(AHDB_GRID.fatTrimPct, REFERENCE_GRADE_SCORES.conformation, REFERENCE_GRADE_SCORES.fat).value;
   const cuttingLossPct = CUTTING_LOSS_PCT.value;
   const hangingLossPct = hangingLossPctOfCold(hangingDays);
-  const meatPct = s.value - hangingLossPct;
-  const fatPct = t.value;
+  const commercialMeatPct = s.value - hangingLossPct;
+  const meatPct = commercialMeatPct * HOME_BUTCHER_FACTOR.value;
+  const homeTrimPct = commercialMeatPct - meatPct;
+  const fatPct = t.value + homeTrimPct;
   const bonePct = 100 - s.value - t.value - cuttingLossPct;
   const refBone = 100 - refS - refT - cuttingLossPct;
-  return { meatFactor: meatPct / YG_MEAT_PCT, boneFactor: bonePct / refBone, fatPct, bonePct, hangingLossPct, cuttingLossPct, meatPct, gridClamped: s.clamped || t.clamped };
+  return { meatFactor: meatPct / YG_MEAT_PCT, boneFactor: bonePct / refBone, fatPct, bonePct, hangingLossPct, cuttingLossPct, meatPct, commercialMeatPct, homeTrimPct, gridClamped: s.clamped || t.clamped };
 }
 
 export { YG_MEAT_PCT };

@@ -4,7 +4,7 @@ import { CONFORMATION_SCORE, FAT_SCORE } from '../data/grading';
 import type { EngineResult } from '../engine/compute';
 import type { Animal, BreedId, Conformation, FatClass, Sex } from '../model/types';
 import { Evidence, SourceLinks } from './bits';
-import { kg, kgRange, pct } from './format';
+import { kg, pct } from './format';
 
 const SEXES: { id: Sex; label: string; hint: string }[] = [
   { id: 'steer', label: 'Steer', hint: 'Castrated male' },
@@ -170,7 +170,7 @@ export function AnimalStep({ animal: a, result: r, onChange }: Props) {
           <dt>Grade used</dt>
           <dd>{r.grade.conformation}{r.grade.fatClass}{r.grade.fromUser ? '' : ' (typical)'}</dd>
           <dt>Take-home meat{a.share === 'half' ? ' (your half)' : ''}</dt>
-          <dd><strong>{kgRange(r.balance.meatRangeKg[0], r.balance.meatRangeKg[1])}</strong></dd>
+          <dd><strong>≈ {kg(r.balance.meatKg, 0)}</strong> <span className="hint">(up to {kg(r.balance.meatRangeKg[1], 0)})</span></dd>
         </dl>
         <p className="hint" title={ko.note}>Kill-out source: <SourceLinks ids={ko.sourceIds} /></p>
         <ul className="notes">

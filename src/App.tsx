@@ -6,7 +6,7 @@ import { DEFAULT_STATE, type AppState } from './engine/state';
 import { AnimalStep } from './ui/AnimalStep';
 import { CutsStep } from './ui/CutsStep';
 import { ExtrasStep } from './ui/ExtrasStep';
-import { kg, kgRange } from './ui/format';
+import { kg } from './ui/format';
 import { PackingStep } from './ui/PackingStep';
 import { ResultsStep } from './ui/ResultsStep';
 import { decodeState, encodeState, loadSaved, saveState } from './ui/persist';
@@ -79,7 +79,7 @@ export default function App() {
       <div className="summary no-print" aria-live="polite">
         <span><b>{SEX_LABEL[a.sex]}</b> · {BREED_BY_ID[a.breed].name.replace(/ \(.*\)/, '')} · {a.ageMonths} mo{a.share === 'half' ? ' · half' : ''}</span>
         <span>Carcass <b>{kg(b.carcassKg, 0)}</b></span>
-        <span>Take-home <b>{kgRange(b.meatRangeKg[0], b.meatRangeKg[1])}</b></span>
+        <span>Take-home <b>≈ {kg(b.meatKg, 0)}</b></span>
         <span>Steaks <b>{kg(result.totals.steaksKg, 0)}</b> · Roasts <b>{kg(result.totals.roastsKg, 0)}</b> · Slow <b>{kg(result.totals.slowCookKg, 0)}</b> · Mince <b>{kg(result.totals.minceBurgersKg, 0)}</b></span>
         {warnings > 0 && <button className="warn-pill" onClick={() => setStep('results')}>{warnings} warning{warnings > 1 ? 's' : ''}</button>}
       </div>

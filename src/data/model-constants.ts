@@ -54,19 +54,16 @@ export const CUTTING_LOSS_PCT: Sourced = d(
   'AHDB drip/cutting loss 2.61 % at 14 days minus SDSU hanging shrink to day 14 on the EU cold-weight basis',
 );
 
-/**
- * Freezer space per kg of packed meat: about 1 L per 0.5–0.6 kg (RESEARCH §7), taken at 0.55 kg/L. Cross-checks: a half
- * beef needs about 6–8 cu ft (170–225 L); the Teagasc heifer's 143 kg filled a 400 L freezer (a full chest freezer is
- * never packed solid, so that is an upper bound).
- */
-export const FREEZER_LITRES_PER_KG: Sourced = d(Math.round((1 / 0.55) * 100) / 100, ['teagasc-heifer'], '1 L per 0.5–0.6 kg packed meat (midpoint 0.55 kg/L); half beef 170–225 L; Teagasc heifer 143 kg in a 400 L freezer as the upper bound');
+/** Freezer capacity per kg of packed meat. Teagasc home-kill heifer: 143.2 kg of meat filled a 400 L freezer. */
+export const FREEZER_LITRES_PER_KG: Sourced = d(Math.round((400 / 143.2) * 100) / 100, ['teagasc-heifer'], '400 L freezer ÷ 143.2 kg packed meat (Teagasc heifer)');
 
 /**
- * Low end of the take-home band, relative to the commercial-boning (AHDB) estimate. The Teagasc home-kill heifer
- * returned 58.4 % of carcass as meat, about 7–10 points below AHDB's commercial yield for its grade (RESEARCH §3.3):
- * home butchers trim harder and keep more bone in. The midpoint, 8.5 points of ~67 %, is ≈ 13 % relative.
+ * Realistic take-home relative to commercial boning (AHDB grid). The Teagasc home-kill heifer returned 58.4 % of
+ * carcass as meat, 7–10 points below the commercial grid yield for its grade (RESEARCH §3.3): craft butchers trim
+ * harder and the customer gets less. Midpoint 8.5 points of ~67 % ≈ 12.7 % relative. All cut weights and counts use
+ * this level; the commercial figure is shown only as an upper bound. The extra trim goes to the fat/trim pool.
  */
-export const HOME_BUTCHER_LOW_FACTOR: Sourced = d(
+export const HOME_BUTCHER_FACTOR: Sourced = d(
   Math.round((1 - 8.5 / 67) * 1000) / 1000,
   ['teagasc-heifer', 'ahdb-europ-yield'],
   'Teagasc heifer 58.4 % meat vs AHDB commercial saleable yield ~66–68 % at O−4−: 7–10 points lower (midpoint 8.5 of ~67 %)',

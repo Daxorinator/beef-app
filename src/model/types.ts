@@ -339,7 +339,7 @@ export interface MassBalance {
   fatReturnedKg: number;
   cuttingLossKg: number;
   meatKg: number;
-  /** Low/high estimate band for meatKg. */
+  /** [realistic estimate (= meatKg), commercial-boning upper bound]. */
   meatRangeKg: [number, number];
 }
 
