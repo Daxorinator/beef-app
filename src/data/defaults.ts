@@ -1,0 +1,42 @@
+// Default user settings. Constants only.
+import type { Animal, ButcherPrefs } from '../model/types';
+
+export const DEFAULT_ANIMAL: Animal = {
+  sex: 'steer',
+  breed: 'aberdeen-angus',
+  ageMonths: 24,
+  weightKg: 600,
+  weightBasis: 'live',
+  hangingDays: 21,
+  organic: { certified: false, sellingAsOrganic: false },
+  share: 'whole',
+  route: 'approved-abattoir',
+  horned: false,
+};
+
+/** Portion guidance: ~225–250 g boneless per person (retailer/butcher guidance). */
+export const ROAST_GRAMS_PER_PERSON = { boneless: 250, boneIn: 400, sourceIds: ['portion-guides'] };
+
+export const DEFAULT_PREFS: ButcherPrefs = {
+  familySize: 4,
+  roastGramsPerPerson: ROAST_GRAMS_PER_PERSON.boneless,
+  steakThicknessCm: 2.5,
+  steaksPerPack: 2,
+  thicknessOverrides: {},
+  mince: { packG: 500, leanPct: 85 },
+  /** Teagasc home-kill example: 9 burgers per kg (≈ 110 g). */
+  burgers: { grams: 113, perPack: 4 },
+  diced: { packG: 500 },
+  trimSplit: { mince: 60, burgers: 25, diced: 15 },
+  packaging: 'vacuum',
+  labelling: { cutName: true, weight: true, date: true, animalTag: true },
+};
+
+export const PACK_OPTIONS = {
+  steaksPerPack: [1, 2, 4, 6],
+  mincePackG: [454, 500, 1000],
+  burgerG: [113, 170, 227],
+  burgersPerPack: [2, 4, 6],
+  dicedPackG: [400, 500, 1000],
+  hangingDays: [7, 10, 14, 21, 28, 35],
+};

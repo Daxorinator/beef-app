@@ -282,6 +282,7 @@ export interface Condition {
   maxCarcassKg?: number;
   organic?: boolean;
   share?: Share;
+  route?: SlaughterRoute;
 }
 
 export interface Advisory {
