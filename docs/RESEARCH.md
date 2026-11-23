@@ -518,3 +518,134 @@ Sources: Irish Butchers' Guild <https://irishbutchersguild.com/beef/>, grassfed.
 8. ~~Carcass presentation~~ — resolved (§2.0). Still open: whether Ireland uses the Art. 6(4) external-fat-removal derogation (Irish S.I. / DAFM).
 5. Bord Bia beef cut names and cooking pages (403 to automated fetch). Check manually.
 6. Is there a current Irish BSE testing requirement for healthy-slaughtered cattle in a given age band?
+
+---
+
+## 10. Second research round (2026-11-23): replacing estimates
+
+### 10.1 Kill-out
+- **Teagasc national 2025 carcass weights** (verified) — <https://teagasc.ie/insights/growing-finishing-beef-cattle-national-performance-data-and-growth-targets/>:
+
+  | Class | Suckler | Dairy-beef | Dairy |
+  |---|---|---|---|
+  | Steers | 391 kg (28.5 mo) | 329 kg (27.0 mo) | 307 kg (27.6 mo) |
+  | Heifers | 341 kg | 282 kg | – |
+  | Young bulls | 408 kg (18.6 mo) | 338 kg (20.3 mo) | 306 kg (20.8 mo) |
+
+- **Teagasc Newford suckler herd** (verified):
+  - Steer kill-out 2015–2021: 52, 52, 54, 55, 54, 54, 53 %.
+  - Heifer kill-out: 52, 52, 53, 52, 53, 52 %.
+  - **Cull cows 48 %** at O=4−, 319 kg, 75 months.
+- **Teagasc Kilkenny Holstein-Friesian steers:** measured 50.5 % and 51.7 % kill-out, P+/O− conformation, fat about 3.
+- **USDA cull-cow grades** (UNL CAP 2021, hot carcass incl. kidney/pelvic/heart fat):
+
+  | Grade | Dressing | Lean |
+  |---|---|---|
+  | Breaker | 52–54 % | 76–82 % |
+  | Boner | 50–52 % | 78–83 % |
+  | Lean | 45–49 % | 88–90 % |
+  | Light | 40–46 % | 90–92 % |
+
+  - **Converted to the Irish basis:** take off 2.5–3.0 points for kidney/pelvic fat (Alberta: US dressing runs 2.5–3.0 higher for this reason) and about 1 point for cold weight. That puts Boner at about 47.3 %.
+  - **Validated** against Newford (48 %) and Minchin 2009 (Irish cull cows: 324 kg / 699 kg = 46.4 %).
+- **Alberta Agriculture** (verified):
+  - Dairy cattle dress about 3 points below beef cattle.
+  - Heifers dress 1.5–2.0 points below steers.
+  - Angus and Limousin dress higher, Hereford and Simmental lower (heavier hide, head, feet).
+  - Cold dressing is up to 2.0 points below warm.
+  - Cull cows straight after weaning dress 48–51 %; after a 60-day high-energy diet, 53–55 %.
+- **Jersey:**
+  - German Holstein vs Jersey bull calves: dressing 5.1 % higher (relative) for Holstein.
+  - Teagasc 5923: Jersey × HF 1.0 point below HF.
+  - J Dairy Sci 2018 (Irish data): Jersey cows about 76 kg lighter than HF cows, with poorer conformation.
+- **Cull dairy cow review (Moreira 2021):**
+  - Dairy cows dress 35–48 % (AMS, US basis).
+  - Cull-cow steaks: Warner-Bratzler shear force 5.7–7.6 kgf vs the 4.6 kgf tenderness benchmark.
+  - Off-flavours are reported in animals over 42 months.
+- **Finnish purebred Angus bulls:** 56.8 % kill-out.
+
+### 10.2 Usable share after trimming (Texas A&M retail cutting tests, Voges et al. 2005)
+- Bone-in ribeye roasts: 94.9 % saleable.
+- Bone-in ribeye steaks: 87.5–90.1 %.
+- Boneless ribeye roll (0×0) → steaks: 95.2–97.2 %.
+- Lip-on ribeye → steaks: 84.1–84.9 %; split into steaks + roast: 43.5–49.1 % steaks and 38.0–44.2 % roast.
+- Bone-in strip loin: 78.6–82.2 %; boneless strip loin: 83.9–85.3 %.
+- Top sirloin butt (rump): 79.4–82.7 %; top sirloin cap (picanha): 73.2–75.1 %.
+- McKenna (abstract): shoulder clod 73.9–78.5 %, top blade 84.4–86.7 %.
+- Tenderloin (Steele et al. 2020): steaks 61–63 % of the untrimmed tenderloin, trimmed 65 %. 170 g steaks were 35.5–39.6 mm thick, which is 43–48 g/cm.
+
+### 10.3 Bone content of bone-in cuts (USDA SR28 refuse %)
+
+| Cut | Bone (refuse) |
+|---|---|
+| T-bone | 25 % |
+| Porterhouse | 23 % |
+| Whole rib | 16–17 % |
+| Bone-in ribeye steak/roast | 14 % |
+| Rib short ribs | 27 % |
+| Back ribs | 52–53 % |
+| Bone-in top loin (wing rib) | 10 % |
+| Chuck blade roast | 19 % |
+| Chuck arm roast | 15–21 % |
+| Shank cross-cuts | 34 % (+6 % fat) |
+| Whole carcass | 19 % |
+
+- **Offal trim (refuse):**
+
+  | Part | Refuse | Trim type |
+  |---|---|---|
+  | Heart | 29 % | fat, veins, connective tissue |
+  | Kidneys | 16 % | same |
+  | Tongue | 16 % | cartilage |
+  | Lungs | 24 % | |
+  | Liver | 0 % | |
+
+- **MLA bone recovery** (boning-room bone by carcass class):
+
+  | Class | Carcass | Boning-room bone |
+  |---|---|---|
+  | Steer | 275 kg | 52.25 kg (19 %) |
+  | Cow | 200 kg | 40 kg (20 %) |
+  | Bull | 300 kg | 60 kg (20 %) |
+
+  - Tibia + femur (marrow bones) ≈ 6 kg per 305 kg carcass (2.0 %).
+  - Head, feet and tail are also tabulated.
+
+### 10.4 Steak sizes
+- **USDA SR28 measured raw steak weights.** The Nutrient Database Improvement studies cut steaks **2.54 cm** thick from 318–408 kg hot carcasses (West et al., chuck study), so g/cm = weight ÷ 2.54.
+
+  | Steak | Weight per 2.54 cm |
+  |---|---|
+  | Ribeye lip-on | 361 g |
+  | Bone-in ribeye | 462 g |
+  | Top loin (sirloin) | 302 g |
+  | T-bone | 460 g |
+  | Porterhouse | 534 g |
+  | Top sirloin (rump) | 608 g |
+  | Cap (picanha) | 223 g |
+  | Denver | 473 g |
+  | Top blade (flat iron) | 250 g |
+  | Clod steak | 241 g |
+  | Chuck pot-roast steak | 369 g |
+  | Top round | 344 g |
+  | Bottom round | 305 g |
+  | Knuckle tip | 197 g |
+  | Eye of round | 140 g |
+  | Boneless short rib | 432 g/piece |
+
+- Scale to a given carcass by cross-section: (carcass / 356)^(2/3).
+- **NCBA subprimal guide** (1300 lb steer, 62 % dressing): 3-rib short rib 8.7 lb per carcass, rib primal 9 %. Fat/bone loss by primal: chuck 15 %, rib 13 %, loin 23 %, round 21 %, thin cuts 15 %.
+
+### 10.5 Removed
+- **Breed "yield adjustment":** removed. Teagasc dissection shows the breed gap is explained by conformation grade.
+- **Horn weight:** marked not quantified.
+- **Sweetbread age threshold:** removed.
+- **"Rarely available" ratings:** replaced by "ask your abattoir" where I had no evidence.
+- **Osso buco:** sold by weight only, since no slice weight was found.
+- **Tomahawk:** the extra long-bone weight is not included (unquantified).
+
+### 10.6 Still blocked (needs manual fetch)
+- **NZ MPI dressing-out review:** bot-protected. Would give DO% for Jersey and Jersey-cross bulls, heifers and dairy cows.
+- **Keane et al. (Grange):** Friesian vs Aberdeen Angus × Friesian vs Belgian Blue × Friesian steers (ScienceDirect 403). The snippet suggests kill-out of 501 / 514 / 542 g/kg, but the order is unconfirmed.
+- **J Dairy Sci 2018 Jersey proportion paper:** full text (403).
+- **McKenna et al. chuck & round retail yields:** full text (403).

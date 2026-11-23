@@ -54,9 +54,10 @@ export const ADVISORIES: Advisory[] = [
   // Age / sex / breed quality
   {
     id: 'older-cow-hang',
-    when: { sex: ['cow'], minAgeMonths: 48 },
+    when: { sex: ['cow'], minAgeMonths: 42 },
     severity: 'tip',
-    message: 'Older cow: hang longer (3 weeks or more) for tenderness, and consider more roasts, slow-cook cuts and mince over thin grilling steaks.',
+    message: 'Mature cow beef is less tender than young prime beef (cull-cow steaks averaged 5.7–7.6 kgf shear force vs a 4.6 kgf tenderness benchmark). Hang longer and favour roasts, slow-cook cuts and mince over thin grilling steaks.',
+    sourceIds: ['moreira-2021'],
   },
   {
     id: 'bull-hang',

@@ -88,11 +88,13 @@ export interface BreedProfile {
   id: BreedId;
   name: string;
   type: 'beef-early-maturing' | 'beef-late-maturing' | 'dairy' | 'dairy-x-beef';
+  /**
+   * Kill-out % (cold carcass, EU reference presentation / live weight). For cows this is the value at
+   * fat class 3 ("Boner" condition); COW_KILLOUT_BY_FAT in grading.ts gives the condition adjustment.
+   */
   killOutPct: Record<Sex, Sourced>;
   defaultConformation: Record<Sex, Conformation>;
   defaultFatClass: Record<Sex, FatClass>;
-  /** Saleable-yield adjustment vs a late-maturing beef animal of equal grade (percentage points). */
-  yieldAdjustmentPts: Sourced;
   /** Longissimus area per kg carcass (cm²/kg) — scales steak sizes. */
   eyeMuscleCm2PerKg: Sourced;
   typicalCarcassKg: Partial<Record<Sex, Sourced>>;
@@ -132,10 +134,16 @@ export interface ProductSpec {
   fraction: number;
   /** Weight multiplier for bone left in (1 = boneless). */
   boneFactor?: number;
-  /** Steaks/slices: grams per cm thickness at the 303 kg reference carcass. */
+  /** Steaks/slices: grams per cm of thickness at `sizeRef.carcassKg`. */
   gramsPerCm?: number;
-  /** Pieces / ribs / whole muscles: typical piece weight (g) at the reference carcass. */
+  /** Pieces / ribs / whole muscles: typical piece weight (g) at `sizeRef.carcassKg`. */
   pieceGrams?: number;
+  /** Where the size figure comes from and the carcass weight it was measured at (scale by cross-section). */
+  sizeRef?: { carcassKg: number; sourceIds: string[]; note?: string };
+  /** No sourced piece size exists: report weight only, never a count. */
+  weightOnly?: boolean;
+  /** Provenance of `fraction` (usable share after trimming / of muscle). */
+  fractionRef?: { sourceIds: string[]; note: string };
   defaultThicknessCm?: number;
   allowedThicknessCm?: number[];
   cookingId: string;
@@ -235,6 +243,8 @@ export interface AnimalPart {
   /** Part exists only when this matches (e.g. pizzle: bull/steer; horns: not polled breeds). */
   presentWhen?: Condition;
   halfShare: HalfShareRule;
+  /** Share of the raw part that is edible after trimming (USDA SR28 refuse), where measured. */
+  edibleYield?: Sourced;
   /** Age-dependent notes (e.g. sweetbreads mainly young animals). */
   ageNote?: string;
   /** What to tell the butcher / abattoir to secure it. */

@@ -1,13 +1,40 @@
 // Carcass cut regions, options and products. Constants only.
-// Meat % of carcass: AHDB Beef Yield Guide (303 kg R4H reference carcass, 2 weeks' maturation).
-// gramsPerCm / pieceGrams are at that reference carcass; scale by cross-section for other carcasses.
+// Region meat %: AHDB Beef Yield Guide (303 kg R4H reference carcass, trimmed primals, 2 weeks' maturation).
+// Every product fraction cites its basis (fractionRef); every size cites the carcass it was measured on (sizeRef).
 import type { CutOption, ProductSpec, Region, Sourced } from '../model/types';
 
 const ahdb = (value: number, note?: string): Sourced => ({ value, evidence: 'verified', sourceIds: ['ahdb-yield-guide'], note });
-const est = (value: number, note: string): Sourced => ({ value, evidence: 'estimate', sourceIds: ['ahdb-yield-guide', 'ahdb-europ-yield'], note });
+const derived = (value: number, sourceIds: string[], note: string): Sourced => ({ value, evidence: 'estimate', sourceIds, note: `Derived: ${note}` });
 
 const STEAK_CM = [1.5, 2, 2.5, 3, 4, 5];
 const THICK_CM = [3, 4, 5, 6];
+const THIN_CM = [0.5, 0.6, 0.8, 1];
+
+// ───────── Size references ─────────
+/** USDA SR28 single-steak weights; Nutrient Database Improvement studies cut steaks 2.54 cm thick from carcasses 318–408 kg hot (≈ 356 kg cold). */
+const usdaSteak = (gramsAt254: number, cut: string): Pick<ProductSpec, 'gramsPerCm' | 'sizeRef'> => ({
+  gramsPerCm: Math.round((gramsAt254 / 2.54) * 10) / 10,
+  sizeRef: { carcassKg: 356, sourceIds: ['usda-sr28', 'west-ndi-chuck'], note: `USDA SR28 "${cut}" ${gramsAt254} g per 2.54 cm steak` },
+});
+/** AHDB per-side muscle weight used as a whole-piece size. */
+const ahdbPiece = (grams: number, what: string): Pick<ProductSpec, 'pieceGrams' | 'sizeRef'> => ({
+  pieceGrams: grams,
+  sizeRef: { carcassKg: 303, sourceIds: ['ahdb-yield-guide'], note: `AHDB ${what}, per side` },
+});
+
+// ───────── Fraction references ─────────
+const F = {
+  roastStyle: { sourceIds: ['tamu-rib-loin'], note: 'Retail roasts: 94.9 % saleable (Texas A&M Table 2, ribeye roasts; lean 0.6 %, fat 4.2 %, purge 0.2 %)' },
+  dice95: { sourceIds: ['ahdb-europ-yield'], note: 'AHDB 2010: clod, neck, brisket trimmed to ≥ 95 % visual lean; remaining 5 % removed when dicing' },
+  ribeyeSteaks: { sourceIds: ['tamu-rib-loin'], note: 'Ribeye roll lip-on → boneless steaks 84.1–84.9 % (Texas A&M Table 5)' },
+  ribeyeBoneInSteaks: { sourceIds: ['tamu-rib-loin'], note: 'Bone-in ribeye → bone-in steaks 87.5–90.1 % (Texas A&M Table 3)' },
+  ribSplit: { sourceIds: ['tamu-rib-loin'], note: 'Ribeye roll cut to steaks + roast: steaks 43.5–49.1 %, roast 38.0–44.2 % (Texas A&M Table 6)' },
+  stripSteaks: { sourceIds: ['tamu-rib-loin'], note: 'Boneless strip loin → steaks 83.9–85.3 % (centre + vein; Texas A&M Table 9)' },
+  rumpSteaks: { sourceIds: ['tamu-rib-loin'], note: 'Top sirloin butt (UK/IE rump) → steaks 79.4–82.7 % (Texas A&M Table 10)' },
+  capSteaks: { sourceIds: ['tamu-rib-loin'], note: 'Top sirloin cap (picanha) → steaks 73.2–75.1 % (Texas A&M Table 11)' },
+  topBlade: { sourceIds: ['mckenna-chuck-round'], note: 'Top blade → retail 84.4–86.7 % (McKenna et al., abstract)' },
+  clod: { sourceIds: ['mckenna-chuck-round'], note: 'Shoulder clod → retail 73.9–78.5 % (McKenna et al., abstract)' },
+};
 
 /** All-to-mince option: no products, everything goes to the trim pool. */
 const toMince = (label = 'Mince / burgers / stewing'): CutOption => ({
@@ -24,6 +51,15 @@ const steak = (p: Omit<ProductSpec, 'kind' | 'allowedThicknessCm'> & { allowedTh
   ...p,
 });
 
+// Bone factors: 1 / (1 − USDA SR28 refuse) unless stated.
+const BONE = {
+  foreRib: 8.23 / 7.17, // AHDB fore rib bone-in vs rolled (1.148)
+  tBone: 1 / (1 - 0.25), // T-bone refuse 25 % bone & connective tissue
+  stripBoneIn: 1 / (1 - 0.1), // top loin steak bone-in, 10 %
+  shortRibs: 1 / (1 - 0.27), // rib short ribs, 27 % bone
+  shank: 1 / (1 - 0.34), // shank crosscuts, 34 % bone
+};
+
 export const REGIONS: Region[] = [
   // ───────────────────────── Forequarter ─────────────────────────
   {
@@ -36,7 +72,7 @@ export const REGIONS: Region[] = [
     defaultOption: 'mince',
     diagramIds: ['neck'],
     options: [
-      { id: 'diced', label: 'Diced stewing beef', products: [{ id: 'neck-diced', name: 'Diced neck (stewing beef)', kind: 'diced', fraction: 0.8, cookingId: 'stew' }] },
+      { id: 'diced', label: 'Diced stewing beef', products: [{ id: 'neck-diced', name: 'Diced neck (stewing beef)', kind: 'diced', fraction: 0.95, fractionRef: F.dice95, cookingId: 'stew' }] },
       toMince(),
     ],
   },
@@ -45,7 +81,7 @@ export const REGIONS: Region[] = [
     name: 'Chuck & blade',
     aka: ["Housekeeper's cut", 'Top rib', 'Chuck', 'Shoulder'],
     quarter: 'fore',
-    meatPctOfCarcass: ahdb(6.74, 'Chuck roll 4.75 + blade 0.99 + underblade 0.72 + underblade fillet 0.28'),
+    meatPctOfCarcass: ahdb(6.74, 'Chuck roll 4.75 + blade 0.99 + underblade 0.72 + underblade fillet 0.28 (10.21 kg per side)'),
     description:
       "The top of the shoulder in front of the fore rib. In Ireland the chuck-eye side is sold as housekeeper's cut (top rib), a classic pot roast. The chuck roll also gives Denver steaks.",
     defaultOption: 'housekeepers',
@@ -54,44 +90,39 @@ export const REGIONS: Region[] = [
       {
         id: 'housekeepers',
         label: "Housekeeper's cut roasts + braising steak",
+        description: 'The Denver muscle goes to mince with this option.',
         products: [
-          { id: 'housekeepers-cut', name: "Housekeeper's cut (top rib) roast", kind: 'roast', fraction: 0.45, cookingId: 'pot-roast' },
-          steak({ id: 'chuck-braising-steak', name: 'Braising steak (chuck)', fraction: 0.3, gramsPerCm: 100, cookingId: 'braise' }),
+          { id: 'housekeepers-cut', name: "Housekeeper's cut (top rib) roast", kind: 'roast', fraction: 0.307, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB chuck-eye centre cut 2.76 + rib-eye fillet 0.38 of 10.21 kg' }, cookingId: 'pot-roast' },
+          steak({ id: 'chuck-braising-steak', name: 'Braising steak (chuck)', fraction: 0.461, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB remaining chuck roll 1.69 + blade 1.50 + underblade 1.09 + underblade fillet 0.43 of 10.21 kg' }, ...usdaSteak(369, 'shoulder pot roast or steak, boneless'), cookingId: 'braise' }),
         ],
       },
       {
         id: 'denver',
         label: "Denver steaks + housekeeper's cut + braising steak",
-        description: 'The Denver muscle (about a third of the chuck roll) is cut into grilling steaks.',
         products: [
-          steak({ id: 'denver-steak', name: 'Denver steak', fraction: 0.23, gramsPerCm: 85, defaultThicknessCm: 2, cookingId: 'flash-steak' }),
-          { id: 'housekeepers-cut-small', name: "Housekeeper's cut (top rib) roast", kind: 'roast', fraction: 0.3, cookingId: 'pot-roast' },
-          steak({ id: 'chuck-braising-steak-b', name: 'Braising steak (chuck)', fraction: 0.25, gramsPerCm: 100, cookingId: 'braise' }),
+          steak({ id: 'denver-steak', name: 'Denver steak', fraction: 0.231, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB Denver muscle 2.36 of 10.21 kg' }, ...usdaSteak(473, 'under blade center steak, Denver Cut'), cookingId: 'flash-steak' }),
+          { id: 'housekeepers-cut-d', name: "Housekeeper's cut (top rib) roast", kind: 'roast', fraction: 0.307, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB chuck-eye centre cut + rib-eye fillet' }, cookingId: 'pot-roast' },
+          steak({ id: 'chuck-braising-steak-d', name: 'Braising steak (chuck)', fraction: 0.461, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB remaining chuck muscles' }, ...usdaSteak(369, 'shoulder pot roast or steak, boneless'), cookingId: 'braise' }),
         ],
       },
-      { id: 'braising', label: 'All braising / chuck steak', products: [steak({ id: 'chuck-steak', name: 'Chuck / braising steak', fraction: 0.8, gramsPerCm: 100, cookingId: 'braise' })] },
-      { id: 'diced', label: 'Diced chuck (stewing)', products: [{ id: 'chuck-diced', name: 'Diced chuck steak', kind: 'diced', fraction: 0.85, cookingId: 'stew' }] },
+      { id: 'braising', label: 'All braising / chuck steak', products: [steak({ id: 'chuck-steak', name: 'Chuck / braising steak', fraction: 0.855, fractionRef: F.topBlade, ...usdaSteak(369, 'shoulder pot roast or steak, boneless'), cookingId: 'braise' })] },
+      { id: 'diced', label: 'Diced chuck (stewing)', products: [{ id: 'chuck-diced', name: 'Diced chuck steak', kind: 'diced', fraction: 0.95, fractionRef: F.dice95, cookingId: 'stew' }] },
       toMince(),
     ],
   },
   {
     id: 'feather',
     name: 'Feather blade',
-    aka: ['Oyster blade', 'Flat iron', 'Butler’s steak', 'Blade'],
+    aka: ['Oyster blade', 'Flat iron', 'Butler’s steak', 'Top blade'],
     quarter: 'fore',
-    meatPctOfCarcass: ahdb(1.62, 'Feather (infraspinatus)'),
+    meatPctOfCarcass: ahdb(1.62, 'Feather (infraspinatus), 2.46 kg per side'),
     description:
-      'A single muscle on the shoulder blade with a thick seam of gristle through the middle. Slow-cooked whole it melts (feather blade); with the gristle removed it becomes two flat iron steaks.',
+      'A single muscle on the shoulder blade with a thick seam of gristle through the middle. Slow-cooked whole it melts (feather blade); with the gristle removed it becomes flat iron steaks.',
     defaultOption: 'braise',
     diagramIds: ['feather'],
     options: [
-      { id: 'braise', label: 'Feather blade braising joints', products: [{ id: 'feather-blade-joint', name: 'Feather blade joint', kind: 'piece', fraction: 0.92, pieceGrams: 600, cookingId: 'braise' }] },
-      {
-        id: 'flat-iron',
-        label: 'Flat iron steaks',
-        description: 'Central sinew removed (more trim loss); tender grilling steaks.',
-        products: [steak({ id: 'flat-iron-steak', name: 'Flat iron steak', fraction: 0.72, gramsPerCm: 90, defaultThicknessCm: 2, cookingId: 'flash-steak' })],
-      },
+      { id: 'braise', label: 'Feather blade braising joints', products: [{ id: 'feather-blade-joint', name: 'Feather blade joint', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, cookingId: 'braise' }] },
+      { id: 'flat-iron', label: 'Flat iron steaks', description: 'Central sinew removed.', products: [steak({ id: 'flat-iron-steak', name: 'Flat iron steak', fraction: 0.855, fractionRef: F.topBlade, ...usdaSteak(250, 'chuck, shoulder clod, top blade, steak'), defaultThicknessCm: 2, cookingId: 'flash-steak' })] },
       toMince(),
     ],
   },
@@ -105,9 +136,9 @@ export const REGIONS: Region[] = [
     defaultOption: 'diced',
     diagramIds: ['clod'],
     options: [
-      { id: 'pot-roast', label: 'LMC pot roast joints', products: [{ id: 'lmc-pot-roast', name: 'Shoulder (LMC) pot roast', kind: 'roast', fraction: 0.8, cookingId: 'pot-roast' }] },
-      { id: 'braising', label: 'Braising steak', products: [steak({ id: 'clod-braising-steak', name: 'Braising steak (shoulder)', fraction: 0.8, gramsPerCm: 100, cookingId: 'braise' })] },
-      { id: 'diced', label: 'Diced stewing beef', products: [{ id: 'clod-diced', name: 'Diced shoulder (stewing beef)', kind: 'diced', fraction: 0.85, cookingId: 'stew' }] },
+      { id: 'pot-roast', label: 'LMC pot roast joints', products: [{ id: 'lmc-pot-roast', name: 'Shoulder (LMC) pot roast', kind: 'roast', fraction: 0.762, fractionRef: F.clod, cookingId: 'pot-roast' }] },
+      { id: 'braising', label: 'Braising steak', products: [steak({ id: 'clod-braising-steak', name: 'Braising steak (shoulder)', fraction: 0.762, fractionRef: F.clod, ...usdaSteak(241, 'shoulder clod, shoulder top and center steaks'), cookingId: 'braise' })] },
+      { id: 'diced', label: 'Diced stewing beef', products: [{ id: 'clod-diced', name: 'Diced shoulder (stewing beef)', kind: 'diced', fraction: 0.95, fractionRef: F.dice95, cookingId: 'stew' }] },
       toMince(),
     ],
   },
@@ -123,27 +154,28 @@ export const REGIONS: Region[] = [
     defaultOption: 'ribeye',
     diagramIds: ['fore-rib'],
     options: [
-      { id: 'on-bone', label: 'Rib roast on the bone', products: [{ id: 'rib-roast-bone-in', name: 'Rib roast (on the bone)', kind: 'roast', fraction: 0.97, boneFactor: 1.15, cookingId: 'prime-roast' }] },
-      { id: 'rolled', label: 'Rolled rib roast', products: [{ id: 'rolled-rib', name: 'Rolled rib roast', kind: 'roast', fraction: 0.95, cookingId: 'prime-roast' }] },
-      { id: 'ribeye', label: 'Rib steaks (ribeye)', products: [steak({ id: 'ribeye-steak', name: 'Rib steak (ribeye)', aka: ['Scotch fillet', 'Entrecôte'], fraction: 0.85, gramsPerCm: 105, cookingId: 'prime-steak' })] },
+      { id: 'on-bone', label: 'Rib roast on the bone', products: [{ id: 'rib-roast-bone-in', name: 'Rib roast (on the bone)', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, boneFactor: BONE.foreRib, cookingId: 'prime-roast' }] },
+      { id: 'rolled', label: 'Rolled rib roast', products: [{ id: 'rolled-rib', name: 'Rolled rib roast', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, cookingId: 'prime-roast' }] },
+      { id: 'ribeye', label: 'Rib steaks (ribeye)', products: [steak({ id: 'ribeye-steak', name: 'Rib steak (ribeye)', aka: ['Scotch fillet', 'Entrecôte'], fraction: 0.845, fractionRef: F.ribeyeSteaks, ...usdaSteak(361, 'rib eye steak, boneless, lip-on'), cookingId: 'prime-steak' })] },
       {
         id: 'cote',
         label: 'Côte de boeuf (bone-in rib steaks)',
-        products: [steak({ id: 'cote-de-boeuf', name: 'Côte de boeuf', fraction: 0.97, boneFactor: 1.15, gramsPerCm: 180, defaultThicknessCm: 5, allowedThicknessCm: THICK_CM, cookingId: 'thick-bone-in-steak' })],
+        products: [steak({ id: 'cote-de-boeuf', name: 'Côte de boeuf', fraction: 0.888, fractionRef: F.ribeyeBoneInSteaks, boneFactor: BONE.foreRib, ...usdaSteak(462, 'rib eye steak, bone-in, lip-on'), defaultThicknessCm: 5, allowedThicknessCm: THICK_CM, cookingId: 'thick-bone-in-steak' })],
       },
       {
         id: 'tomahawk',
         label: 'Tomahawk steaks',
-        description: 'Bone-in rib steak with the long rib bone left on and cleaned. Ask your butcher in advance; the long bone comes from the short-rib plate.',
+        description:
+          'Bone-in rib steak with the long rib bone left on and cleaned. Ask your butcher in advance. Weights shown are for côte de boeuf; the extra length of bone is not included because no measured figure exists.',
         excludes: [{ path: 'plate', optionIds: ['short-ribs', 'jacobs-ladder'], reason: 'Tomahawk bones run down into the short-rib plate, so it can no longer be cut as bone-in short ribs.' }],
-        products: [steak({ id: 'tomahawk', name: 'Tomahawk steak', fraction: 0.95, boneFactor: 1.28, gramsPerCm: 200, defaultThicknessCm: 5, allowedThicknessCm: THICK_CM, cookingId: 'thick-bone-in-steak' })],
+        products: [steak({ id: 'tomahawk', name: 'Tomahawk steak', fraction: 0.888, fractionRef: F.ribeyeBoneInSteaks, boneFactor: BONE.foreRib, ...usdaSteak(462, 'rib eye steak, bone-in, lip-on (excl. long bone)'), defaultThicknessCm: 5, allowedThicknessCm: THICK_CM, cookingId: 'thick-bone-in-steak' })],
       },
       {
         id: 'split',
-        label: 'Half roast, half rib steaks',
+        label: 'Rolled rib roast + rib steaks',
         products: [
-          { id: 'rib-roast-half', name: 'Rib roast (on the bone)', kind: 'roast', fraction: 0.49, boneFactor: 1.15, cookingId: 'prime-roast' },
-          steak({ id: 'ribeye-steak-half', name: 'Rib steak (ribeye)', fraction: 0.43, gramsPerCm: 105, cookingId: 'prime-steak' }),
+          { id: 'rolled-rib-half', name: 'Rolled rib roast', kind: 'roast', fraction: 0.411, fractionRef: F.ribSplit, cookingId: 'prime-roast' },
+          steak({ id: 'ribeye-steak-half', name: 'Rib steak (ribeye)', fraction: 0.463, fractionRef: F.ribSplit, ...usdaSteak(361, 'rib eye steak, boneless, lip-on'), cookingId: 'prime-steak' }),
         ],
       },
     ],
@@ -153,31 +185,31 @@ export const REGIONS: Region[] = [
     name: 'Brisket',
     aka: ['Rolled brisket', 'Boiling beef', 'Salt beef'],
     quarter: 'fore',
-    meatPctOfCarcass: ahdb(3.52, 'Flat brisket (boneless, fat ≤ 10 mm)'),
+    meatPctOfCarcass: ahdb(3.52, 'Flat brisket (boneless, fat ≤ 10 mm), 5.34 kg per side'),
     description: 'The breast, between the fore legs. Rich, fatty and best cooked low and slow, rolled for pot roasting, salted, or smoked.',
     defaultOption: 'rolled',
     diagramIds: ['brisket'],
     options: [
-      { id: 'rolled', label: 'Rolled brisket joints', products: [{ id: 'rolled-brisket', name: 'Rolled brisket', kind: 'roast', fraction: 0.9, cookingId: 'brisket' }] },
-      { id: 'flat', label: 'Whole flat brisket (for smoking)', products: [{ id: 'flat-brisket', name: 'Flat brisket', kind: 'piece', fraction: 0.95, pieceGrams: 2700, cookingId: 'brisket' }] },
-      { id: 'salt', label: 'Salt / spiced brisket', description: 'Brined by the butcher (corned or spiced beef).', products: [{ id: 'salt-brisket', name: 'Salt / spiced brisket', kind: 'cured', fraction: 0.9, cookingId: 'cured' }] },
+      { id: 'rolled', label: 'Rolled brisket joints', products: [{ id: 'rolled-brisket', name: 'Rolled brisket', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, cookingId: 'brisket' }] },
+      { id: 'flat', label: 'Whole flat brisket (for smoking)', products: [{ id: 'flat-brisket', name: 'Flat brisket (whole)', kind: 'piece', fraction: 0.99, fractionRef: { sourceIds: ['usda-sr28'], note: 'Brisket flat, refuse 1 % connective tissue' }, ...ahdbPiece(5340, 'flat brisket'), cookingId: 'brisket' }] },
+      { id: 'salt', label: 'Salt / spiced brisket', description: 'Brined by the butcher (corned or spiced beef).', products: [{ id: 'salt-brisket', name: 'Salt / spiced brisket', kind: 'cured', fraction: 0.95, fractionRef: F.roastStyle, cookingId: 'cured' }] },
       toMince(),
     ],
   },
   {
     id: 'plate',
-    name: 'Short ribs (thin & thick rib)',
+    name: 'Short ribs (plate)',
     aka: ["Jacob's ladder", 'Short rib', 'Flat ribs', 'Plate'],
     quarter: 'fore',
-    meatPctOfCarcass: est(3.0, 'Not weighed separately by AHDB (boned into trim); estimated from the 85 % VL trim pool'),
-    bonePctOfCarcass: est(1.5, 'Rib bone in the plate; estimate'),
-    description: 'The rib ends below the fore rib and chuck. Kept on the bone as short ribs or a whole Jacob\'s ladder, or boned out for mince.',
+    meatPctOfCarcass: derived(0.788, ['ncba-subprimal', 'usda-sr28'], '3-rib short rib 8.7 lb of a 806 lb carcass (1.08 %, NCBA) less 27 % bone (USDA SR28). AHDB boned this into trim, so it is taken out of the trim pool'),
+    bonePctOfCarcass: derived(0.292, ['ncba-subprimal', 'usda-sr28'], '1.08 % × 27 % bone'),
+    description: "The rib ends below the fore rib. Kept on the bone as short ribs or a whole Jacob's ladder, or boned out for mince.",
     defaultOption: 'mince',
     diagramIds: ['plate'],
     options: [
-      { id: 'short-ribs', label: 'Short ribs (cut between the bones)', products: [{ id: 'short-ribs', name: 'Short ribs', kind: 'ribs', fraction: 0.9, boneFactor: 1.5, pieceGrams: 450, cookingId: 'ribs' }] },
-      { id: 'jacobs-ladder', label: "Jacob's ladder racks", products: [{ id: 'jacobs-ladder', name: "Jacob's ladder (rack)", kind: 'ribs', fraction: 0.9, boneFactor: 1.5, pieceGrams: 2000, cookingId: 'ribs' }] },
-      { id: 'boneless', label: 'Boneless short rib', products: [{ id: 'boneless-short-rib', name: 'Boneless short rib', kind: 'piece', fraction: 0.8, pieceGrams: 300, cookingId: 'braise' }] },
+      { id: 'short-ribs', label: 'Short ribs (cut between the bones)', products: [{ id: 'short-ribs', name: 'Short rib (single bone)', kind: 'ribs', fraction: 1, fractionRef: { sourceIds: ['ncba-subprimal'], note: 'Region is defined as the NCBA 3-rib short rib' }, boneFactor: BONE.shortRibs, pieceGrams: 658, sizeRef: { carcassKg: 358, sourceIds: ['ncba-subprimal'], note: '8.7 lb per carcass ÷ 6 bones (3 per side), bone-in' }, cookingId: 'ribs' }] },
+      { id: 'jacobs-ladder', label: "Jacob's ladder (3-bone rack)", products: [{ id: 'jacobs-ladder', name: "Jacob's ladder (3-bone rack)", kind: 'ribs', fraction: 1, fractionRef: { sourceIds: ['ncba-subprimal'], note: 'Whole 3-rib short rib per side' }, boneFactor: BONE.shortRibs, pieceGrams: 1974, sizeRef: { carcassKg: 358, sourceIds: ['ncba-subprimal'], note: '8.7 lb per carcass ÷ 2 sides, bone-in' }, cookingId: 'ribs' }] },
+      { id: 'boneless', label: 'Boneless short rib', products: [{ id: 'boneless-short-rib', name: 'Boneless short rib', kind: 'piece', fraction: 0.93, fractionRef: { sourceIds: ['usda-sr28'], note: 'Boneless short ribs, refuse 7 % connective tissue' }, pieceGrams: 432, sizeRef: { carcassKg: 356, sourceIds: ['usda-sr28'], note: 'USDA SR28 "chuck, short ribs, boneless" 432 g per piece' }, cookingId: 'braise' }] },
       toMince(),
     ],
   },
@@ -187,13 +219,13 @@ export const REGIONS: Region[] = [
     aka: ['Shin', 'Shank', 'Osso buco'],
     quarter: 'fore',
     meatPctOfCarcass: ahdb(1.35, 'Fore shin, trimmed'),
-    bonePctOfCarcass: est(1.0, 'Shank bone for cross-cut osso buco; estimate'),
+    bonePctOfCarcass: derived(0.7, ['usda-sr28', 'ahdb-yield-guide'], 'shank crosscuts are 34 % bone (USDA SR28): 1.35 × 0.34 / 0.66'),
     description: 'The front leg below the shoulder. Gelatinous, deeply flavoured slow-cooking meat; cross-cut through the bone it is osso buco.',
     defaultOption: 'diced',
     diagramIds: ['fore-shin'],
     options: [
-      { id: 'osso-buco', label: 'Osso buco (cross-cut, bone in)', products: [steak({ id: 'fore-osso-buco', name: 'Osso buco (fore shin)', fraction: 0.95, boneFactor: 1.6, gramsPerCm: 110, defaultThicknessCm: 4, allowedThicknessCm: THICK_CM, cookingId: 'shin' })] },
-      { id: 'diced', label: 'Boneless shin (diced or whole)', products: [{ id: 'fore-shin-boneless', name: 'Boneless shin', kind: 'diced', fraction: 0.9, cookingId: 'shin' }] },
+      { id: 'osso-buco', label: 'Osso buco (cross-cut, bone in)', description: 'Sold by weight: no measured slice weight exists.', products: [{ id: 'fore-osso-buco', name: 'Osso buco (fore shin)', kind: 'piece', fraction: 1, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB fore shin is already trimmed' }, boneFactor: BONE.shank, weightOnly: true, defaultThicknessCm: 4, allowedThicknessCm: THICK_CM, cookingId: 'shin' }] },
+      { id: 'diced', label: 'Boneless shin (diced or whole)', products: [{ id: 'fore-shin-boneless', name: 'Boneless shin', kind: 'diced', fraction: 0.95, fractionRef: F.dice95, cookingId: 'shin' }] },
       toMince(),
     ],
   },
@@ -205,7 +237,7 @@ export const REGIONS: Region[] = [
     aka: ['Sirloin', 'Striploin', 'Fillet', 'T-bone', 'Porterhouse', 'Wing rib'],
     quarter: 'hind',
     meatPctOfCarcass: ahdb(6.41, 'Striploin 4.49 + fillet 1.92'),
-    bonePctOfCarcass: est(1.5, 'Lumbar vertebrae left in T-bone / wing rib; estimate'),
+    bonePctOfCarcass: derived(1.82, ['usda-sr28', 'tamu-rib-loin'], 'bone carried by T-bones: (1/0.75 − 1) × 0.85 × 6.41 % (T-bone refuse 25 %)'),
     description:
       'The most valuable cuts. Either cut through the bone as T-bone and porterhouse (sirloin and fillet together), or take the fillet out and keep the sirloin and fillet separate. You cannot have both from the same side. T-bones are legal from cattle of any age in Ireland.',
     defaultOption: 'separate',
@@ -215,10 +247,8 @@ export const REGIONS: Region[] = [
         id: 't-bone',
         label: 'T-bone & porterhouse steaks',
         description: 'Sirloin and fillet on the bone. Choosing T-bones means no separate fillet or sirloin steaks from this side.',
-        products: [steak({ id: 't-bone', name: 'T-bone / porterhouse steak', fraction: 0.92, boneFactor: 1.25, gramsPerCm: 160, cookingId: 'prime-steak' })],
-        advisories: [
-          { id: 't-bone-small', when: { breed: ['jersey'] }, severity: 'tip', message: 'Jersey loins are small: T-bones will be modest in size. Consider 3 cm or thicker.', sourceIds: ['teagasc-5923'] },
-        ],
+        products: [steak({ id: 't-bone', name: 'T-bone / porterhouse steak', fraction: 0.85, fractionRef: { sourceIds: ['tamu-rib-loin'], note: 'Strip-loin steak yield 83.9–85.3 % applied to the loin' }, boneFactor: BONE.tBone, ...usdaSteak(460, 'short loin, t-bone steak (porterhouse 534 g)'), cookingId: 'prime-steak' })],
+        advisories: [{ id: 't-bone-small', when: { breed: ['jersey'] }, severity: 'tip', message: 'Jersey loins are small: T-bones will be modest in size. Consider 3 cm or thicker.', sourceIds: ['teagasc-5923'] }],
       },
       {
         id: 'separate',
@@ -230,15 +260,15 @@ export const REGIONS: Region[] = [
             share: 0.7,
             defaultOption: 'sirloin-steaks',
             options: [
-              { id: 'sirloin-steaks', label: 'Sirloin steaks', products: [steak({ id: 'sirloin-steak', name: 'Sirloin (striploin) steak', aka: ['Striploin steak', 'Entrecôte'], fraction: 0.92, gramsPerCm: 90, cookingId: 'prime-steak' })] },
-              { id: 'sirloin-roast', label: 'Sirloin roast (boneless)', products: [{ id: 'sirloin-roast', name: 'Sirloin roast', kind: 'roast', fraction: 0.92, cookingId: 'prime-roast' }] },
-              { id: 'wing-rib', label: 'Wing rib (sirloin on the bone) roast', products: [{ id: 'wing-rib', name: 'Wing rib roast (on the bone)', kind: 'roast', fraction: 0.92, boneFactor: 1.2, cookingId: 'prime-roast' }] },
+              { id: 'sirloin-steaks', label: 'Sirloin steaks', products: [steak({ id: 'sirloin-steak', name: 'Sirloin (striploin) steak', aka: ['Striploin steak', 'Entrecôte'], fraction: 0.85, fractionRef: F.stripSteaks, ...usdaSteak(302, 'loin, top loin steak, boneless, lip-on'), cookingId: 'prime-steak' })] },
+              { id: 'sirloin-roast', label: 'Sirloin roast (boneless)', products: [{ id: 'sirloin-roast', name: 'Sirloin roast', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, cookingId: 'prime-roast' }] },
+              { id: 'wing-rib', label: 'Wing rib (sirloin on the bone) roast', products: [{ id: 'wing-rib', name: 'Wing rib roast (on the bone)', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, boneFactor: BONE.stripBoneIn, cookingId: 'prime-roast' }] },
               {
                 id: 'split',
                 label: 'Half roast, half steaks',
                 products: [
-                  { id: 'sirloin-roast-half', name: 'Sirloin roast', kind: 'roast', fraction: 0.46, cookingId: 'prime-roast' },
-                  steak({ id: 'sirloin-steak-half', name: 'Sirloin (striploin) steak', fraction: 0.46, gramsPerCm: 90, cookingId: 'prime-steak' }),
+                  { id: 'sirloin-roast-half', name: 'Sirloin roast', kind: 'roast', fraction: 0.475, fractionRef: { sourceIds: ['tamu-rib-loin'], note: 'Half at roast yield 95 %' }, cookingId: 'prime-roast' },
+                  steak({ id: 'sirloin-steak-half', name: 'Sirloin (striploin) steak', fraction: 0.425, fractionRef: { sourceIds: ['tamu-rib-loin'], note: 'Half at strip-steak yield 85 %' }, ...usdaSteak(302, 'loin, top loin steak, boneless, lip-on'), cookingId: 'prime-steak' }),
                 ],
               },
             ],
@@ -253,19 +283,19 @@ export const REGIONS: Region[] = [
                 id: 'steaks',
                 label: 'Fillet steaks + tail for stir-fry',
                 products: [
-                  steak({ id: 'fillet-steak', name: 'Fillet steak', aka: ['Tournedos', 'Medallion'], fraction: 0.8, gramsPerCm: 45, defaultThicknessCm: 4, allowedThicknessCm: [3, 4, 5], cookingId: 'fillet' }),
-                  { id: 'fillet-tail', name: 'Fillet tail (stir-fry / stroganoff)', kind: 'piece', fraction: 0.1, pieceGrams: 290, cookingId: 'fillet' },
+                  steak({ id: 'fillet-steak', name: 'Fillet steak', aka: ['Tournedos', 'Medallion'], fraction: 0.734, fractionRef: { sourceIds: ['ahdb-yield-guide', 'steele-2020'], note: 'Chain off 88.7 % (AHDB) × steaks 94 % of trimmed tenderloin (Steele 2020: 61–63 % of 65 %) less tail' }, gramsPerCm: 45.3, sizeRef: { carcassKg: 356, sourceIds: ['steele-2020'], note: '170.1 g steaks at 35.5–39.6 mm across ribeye-area categories' }, defaultThicknessCm: 4, allowedThicknessCm: [3, 4, 5], cookingId: 'fillet' }),
+                  { id: 'fillet-tail', name: 'Fillet tail (stir-fry / stroganoff)', kind: 'piece', fraction: 0.1, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB fillet tail 0.29 of 2.91 kg' }, ...ahdbPiece(290, 'fillet tail'), cookingId: 'fillet' },
                 ],
               },
-              { id: 'whole', label: 'Whole fillet (Wellington / roast)', products: [{ id: 'whole-fillet', name: 'Whole fillet', kind: 'roast', fraction: 0.95, cookingId: 'fillet' }] },
+              { id: 'whole', label: 'Whole fillet (Wellington / roast)', products: [{ id: 'whole-fillet', name: 'Whole fillet', kind: 'piece', fraction: 0.887, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB fillet without chain 2.58 of 2.91 kg' }, ...ahdbPiece(2580, 'fillet, chain off'), cookingId: 'fillet' }] },
               {
                 id: 'chateaubriand',
                 label: 'Chateaubriand + fillet steaks',
-                description: 'The thick centre cut kept as a roasting piece for two; the rest as steaks.',
+                description: 'The thick centre cut kept whole as a roasting piece; the head as steaks.',
                 products: [
-                  { id: 'chateaubriand', name: 'Chateaubriand (centre fillet, serves 2)', kind: 'piece', fraction: 0.43, pieceGrams: 500, cookingId: 'fillet' },
-                  steak({ id: 'fillet-steak-c', name: 'Fillet steak', fraction: 0.37, gramsPerCm: 45, defaultThicknessCm: 4, allowedThicknessCm: [3, 4, 5], cookingId: 'fillet' }),
-                  { id: 'fillet-tail-c', name: 'Fillet tail (stir-fry)', kind: 'piece', fraction: 0.1, pieceGrams: 290, cookingId: 'fillet' },
+                  { id: 'chateaubriand', name: 'Chateaubriand (centre fillet)', kind: 'piece', fraction: 0.43, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB middle fillet 1.25 of 2.91 kg' }, ...ahdbPiece(1250, 'middle fillet'), cookingId: 'fillet' },
+                  steak({ id: 'fillet-steak-c', name: 'Fillet steak', fraction: 0.336, fractionRef: { sourceIds: ['ahdb-yield-guide', 'steele-2020'], note: 'AHDB rump fillet 1.04 of 2.91 kg × 94 % steak yield' }, gramsPerCm: 45.3, sizeRef: { carcassKg: 356, sourceIds: ['steele-2020'] }, defaultThicknessCm: 4, allowedThicknessCm: [3, 4, 5], cookingId: 'fillet' }),
+                  { id: 'fillet-tail-c', name: 'Fillet tail (stir-fry)', kind: 'piece', fraction: 0.1, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB fillet tail' }, ...ahdbPiece(290, 'fillet tail'), cookingId: 'fillet' },
                 ],
               },
             ],
@@ -279,14 +309,13 @@ export const REGIONS: Region[] = [
     name: 'Rump',
     aka: ['Rump steak', 'Picanha', 'Rump cap', 'Tri-tip', 'Rump tail'],
     quarter: 'hind',
-    meatPctOfCarcass: ahdb(4.89, '"D" rump 3.95 + rump tail 0.94'),
-    description:
-      'Behind the sirloin. Full-flavoured steaks or a roasting joint. The fat-capped top (picanha) and the rump tail (tri-tip) can be taken off first.',
+    meatPctOfCarcass: ahdb(4.89, '"D" rump 3.95 + rump tail 0.94 (7.41 kg per side)'),
+    description: 'Behind the sirloin. Full-flavoured steaks or a roasting joint. The fat-capped top (picanha) and the rump tail (tri-tip) can be taken off first.',
     defaultOption: 'steaks',
     diagramIds: ['rump'],
     options: [
-      { id: 'steaks', label: 'Rump steaks', products: [steak({ id: 'rump-steak', name: 'Rump steak', fraction: 0.88, gramsPerCm: 110, defaultThicknessCm: 2, cookingId: 'prime-steak' })] },
-      { id: 'roast', label: 'Rump roasts', products: [{ id: 'rump-roast', name: 'Rump roast', kind: 'roast', fraction: 0.9, cookingId: 'prime-roast' }] },
+      { id: 'steaks', label: 'Rump steaks', products: [steak({ id: 'rump-steak', name: 'Rump steak (full slice)', fraction: 0.811, fractionRef: F.rumpSteaks, ...usdaSteak(608, 'top sirloin, steak'), defaultThicknessCm: 2, cookingId: 'prime-steak', notes: 'A full-width rump slice; ask your butcher to portion it' })] },
+      { id: 'roast', label: 'Rump roasts', products: [{ id: 'rump-roast', name: 'Rump roast', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, cookingId: 'prime-roast' }] },
       {
         id: 'split',
         label: 'Picanha & tri-tip off, rest as steaks',
@@ -297,8 +326,8 @@ export const REGIONS: Region[] = [
             share: 0.19,
             defaultOption: 'whole',
             options: [
-              { id: 'whole', label: 'Whole picanha', products: [{ id: 'picanha-whole', name: 'Picanha (whole rump cap)', kind: 'roast', fraction: 0.95, cookingId: 'prime-roast' }] },
-              { id: 'steaks', label: 'Picanha steaks', products: [steak({ id: 'picanha-steak', name: 'Picanha steak', fraction: 0.92, gramsPerCm: 75, cookingId: 'prime-steak' })] },
+              { id: 'whole', label: 'Whole picanha', products: [{ id: 'picanha-whole', name: 'Picanha (whole rump cap)', kind: 'piece', fraction: 0.95, fractionRef: F.roastStyle, ...ahdbPiece(1440, 'rump cap'), cookingId: 'prime-roast' }] },
+              { id: 'steaks', label: 'Picanha steaks', products: [steak({ id: 'picanha-steak', name: 'Picanha steak', fraction: 0.741, fractionRef: F.capSteaks, ...usdaSteak(223, 'loin, top sirloin cap steak, boneless'), cookingId: 'prime-steak' })] },
             ],
           },
           {
@@ -307,8 +336,8 @@ export const REGIONS: Region[] = [
             share: 0.62,
             defaultOption: 'steaks',
             options: [
-              { id: 'steaks', label: 'Rump steaks', products: [steak({ id: 'prime-rump-steak', name: 'Rump steak', fraction: 0.9, gramsPerCm: 90, defaultThicknessCm: 2, cookingId: 'prime-steak' })] },
-              { id: 'roast', label: 'Rump roast', products: [{ id: 'prime-rump-roast', name: 'Rump roast', kind: 'roast', fraction: 0.92, cookingId: 'prime-roast' }] },
+              { id: 'steaks', label: 'Rump steaks', products: [steak({ id: 'prime-rump-steak', name: 'Rump steak (full slice, cap off)', fraction: 0.811, fractionRef: F.rumpSteaks, ...usdaSteak(608, 'top sirloin, steak'), defaultThicknessCm: 2, cookingId: 'prime-steak' })] },
+              { id: 'roast', label: 'Rump roast', products: [{ id: 'prime-rump-roast', name: 'Rump roast', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, cookingId: 'prime-roast' }] },
             ],
           },
           {
@@ -317,7 +346,7 @@ export const REGIONS: Region[] = [
             share: 0.19,
             defaultOption: 'whole',
             options: [
-              { id: 'whole', label: 'Whole tri-tip', products: [{ id: 'tri-tip', name: 'Tri-tip (rump tail)', kind: 'piece', fraction: 0.92, pieceGrams: 1420, cookingId: 'prime-roast' }] },
+              { id: 'whole', label: 'Whole tri-tip', products: [{ id: 'tri-tip', name: 'Tri-tip (rump tail)', kind: 'piece', fraction: 0.95, fractionRef: F.roastStyle, ...ahdbPiece(1420, 'rump tail'), cookingId: 'prime-roast' }] },
               toMince('Leave in mince'),
             ],
           },
@@ -331,23 +360,23 @@ export const REGIONS: Region[] = [
     name: 'Topside',
     aka: ['Round roast', 'Round steak', 'Minute steak', 'Casserole beef'],
     quarter: 'hind',
-    meatPctOfCarcass: ahdb(6.53),
+    meatPctOfCarcass: ahdb(6.53, '9.89 kg per side'),
     description: 'The inside of the hind leg, "the most tender part of the round". Lean roasting joints (Irish round roast), round steak, minute steak or stir-fry.',
     defaultOption: 'split',
     diagramIds: ['topside'],
     options: [
-      { id: 'roasts', label: 'Round roasts', products: [{ id: 'topside-roast', name: 'Round roast (topside)', kind: 'roast', fraction: 0.9, cookingId: 'lean-roast' }] },
-      { id: 'round-steak', label: 'Round steaks', products: [steak({ id: 'topside-round-steak', name: 'Round steak (topside)', fraction: 0.85, gramsPerCm: 130, defaultThicknessCm: 1.5, cookingId: 'flash-steak' })] },
-      { id: 'minute', label: 'Minute steaks / stir-fry', products: [steak({ id: 'minute-steak', name: 'Minute steak', fraction: 0.85, gramsPerCm: 200, defaultThicknessCm: 0.6, allowedThicknessCm: [0.5, 0.6, 0.8, 1], cookingId: 'minute-steak' })] },
+      { id: 'roasts', label: 'Round roasts', products: [{ id: 'topside-roast', name: 'Round roast (topside)', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, cookingId: 'lean-roast' }] },
+      { id: 'round-steak', label: 'Round steaks', description: 'The gracilis (inner flap) goes to dice/mince.', products: [steak({ id: 'topside-round-steak', name: 'Round steak (topside)', fraction: 0.729, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB topside without gracilis 72.9 % of primal' }, ...usdaSteak(344, 'round, top round steak, boneless'), defaultThicknessCm: 1.5, cookingId: 'flash-steak' })] },
+      { id: 'minute', label: 'Minute steaks / stir-fry', products: [steak({ id: 'minute-steak', name: 'Minute steak', fraction: 0.729, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB topside without gracilis' }, ...usdaSteak(344, 'round, top round steak, boneless'), defaultThicknessCm: 0.6, allowedThicknessCm: THIN_CM, cookingId: 'minute-steak' })] },
       {
         id: 'split',
         label: 'Half round roasts, half round steaks',
         products: [
-          { id: 'topside-roast-half', name: 'Round roast (topside)', kind: 'roast', fraction: 0.5, cookingId: 'lean-roast' },
-          steak({ id: 'topside-round-steak-half', name: 'Round steak (topside)', fraction: 0.4, gramsPerCm: 130, defaultThicknessCm: 1.5, cookingId: 'flash-steak' }),
+          { id: 'topside-roast-half', name: 'Round roast (topside)', kind: 'roast', fraction: 0.475, fractionRef: { sourceIds: ['tamu-rib-loin'], note: 'Half at roast yield 95 %' }, cookingId: 'lean-roast' },
+          steak({ id: 'topside-round-steak-half', name: 'Round steak (topside)', fraction: 0.365, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'Half at 72.9 % (topside without gracilis)' }, ...usdaSteak(344, 'round, top round steak, boneless'), defaultThicknessCm: 1.5, cookingId: 'flash-steak' }),
         ],
       },
-      { id: 'diced', label: 'Diced (casserole beef)', products: [{ id: 'topside-diced', name: 'Casserole beef (diced topside)', kind: 'diced', fraction: 0.88, cookingId: 'stew' }] },
+      { id: 'diced', label: 'Diced (casserole beef)', products: [{ id: 'topside-diced', name: 'Casserole beef (diced topside)', kind: 'diced', fraction: 0.95, fractionRef: F.dice95, cookingId: 'stew' }] },
       toMince(),
     ],
   },
@@ -356,12 +385,12 @@ export const REGIONS: Region[] = [
     name: 'Silverside',
     aka: ['Eye of round', 'Salmon cut', 'Spiced beef', 'Corned beef', 'Pot roast'],
     quarter: 'hind',
-    meatPctOfCarcass: ahdb(6.38, 'Silverside with salmon cut (eye of round)'),
+    meatPctOfCarcass: ahdb(6.38, 'Silverside with salmon cut (eye of round), 9.66 kg per side'),
     description: 'The outside of the hind leg. Lean pot roasts, and the traditional cut for Irish spiced and corned beef. The eye of round (salmon cut) can be taken out as a neat joint.',
     defaultOption: 'pot-roast',
     diagramIds: ['silverside'],
     options: [
-      { id: 'pot-roast', label: 'Silverside pot roasts', products: [{ id: 'silverside-roast', name: 'Silverside (pot roast)', kind: 'roast', fraction: 0.9, cookingId: 'pot-roast' }] },
+      { id: 'pot-roast', label: 'Silverside pot roasts', products: [{ id: 'silverside-roast', name: 'Silverside (pot roast)', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, cookingId: 'pot-roast' }] },
       {
         id: 'split',
         label: 'Eye of round out, rest pot roast',
@@ -369,30 +398,31 @@ export const REGIONS: Region[] = [
           {
             id: 'eye-of-round',
             name: 'Eye of round (salmon cut)',
-            share: 0.3,
+            share: 0.29,
             defaultOption: 'roast',
             options: [
-              { id: 'roast', label: 'Eye of round roast', products: [{ id: 'eye-of-round', name: 'Eye of round roast', kind: 'roast', fraction: 0.95, cookingId: 'pot-roast' }] },
-              { id: 'cured', label: 'Spiced / corned', products: [{ id: 'eye-of-round-cured', name: 'Spiced eye of round', kind: 'cured', fraction: 0.95, cookingId: 'cured' }] },
+              { id: 'roast', label: 'Eye of round roast', products: [{ id: 'eye-of-round', name: 'Eye of round roast', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, cookingId: 'pot-roast' }] },
+              { id: 'steaks', label: 'Eye of round steaks', products: [steak({ id: 'eye-of-round-steak', name: 'Eye of round steak', fraction: 0.95, fractionRef: F.roastStyle, ...usdaSteak(140, 'round, eye of round steak, boneless'), defaultThicknessCm: 2, cookingId: 'braise' })] },
+              { id: 'cured', label: 'Spiced / corned', products: [{ id: 'eye-of-round-cured', name: 'Spiced eye of round', kind: 'cured', fraction: 0.95, fractionRef: F.roastStyle, cookingId: 'cured' }] },
             ],
           },
           {
             id: 'outside',
             name: 'Silverside (remainder)',
-            share: 0.7,
+            share: 0.71,
             defaultOption: 'pot-roast',
             options: [
-              { id: 'pot-roast', label: 'Pot roasts', products: [{ id: 'silverside-roast-b', name: 'Silverside (pot roast)', kind: 'roast', fraction: 0.88, cookingId: 'pot-roast' }] },
-              { id: 'cured', label: 'Spiced / corned beef', products: [{ id: 'silverside-cured-b', name: 'Spiced / corned silverside', kind: 'cured', fraction: 0.88, cookingId: 'cured' }] },
-              { id: 'diced', label: 'Diced', products: [{ id: 'silverside-diced-b', name: 'Diced silverside', kind: 'diced', fraction: 0.85, cookingId: 'stew' }] },
+              { id: 'pot-roast', label: 'Pot roasts', products: [{ id: 'silverside-roast-b', name: 'Silverside (pot roast)', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, cookingId: 'pot-roast' }] },
+              { id: 'cured', label: 'Spiced / corned beef', products: [{ id: 'silverside-cured-b', name: 'Spiced / corned silverside', kind: 'cured', fraction: 0.95, fractionRef: F.roastStyle, cookingId: 'cured' }] },
+              { id: 'diced', label: 'Diced', products: [{ id: 'silverside-diced-b', name: 'Diced silverside', kind: 'diced', fraction: 0.95, fractionRef: F.dice95, cookingId: 'stew' }] },
               toMince(),
             ],
           },
         ],
       },
-      { id: 'cured', label: 'Spiced / corned beef', description: 'Ask for it brined; traditional Irish spiced beef.', products: [{ id: 'silverside-cured', name: 'Spiced / corned silverside', kind: 'cured', fraction: 0.9, cookingId: 'cured' }] },
-      { id: 'round-steak', label: 'Round steaks', products: [steak({ id: 'silverside-round-steak', name: 'Round steak (silverside)', fraction: 0.82, gramsPerCm: 130, defaultThicknessCm: 1.5, cookingId: 'braise' })] },
-      { id: 'diced', label: 'Diced stewing beef', products: [{ id: 'silverside-diced', name: 'Diced silverside', kind: 'diced', fraction: 0.88, cookingId: 'stew' }] },
+      { id: 'cured', label: 'Spiced / corned beef', description: 'Ask for it brined; traditional Irish spiced beef.', products: [{ id: 'silverside-cured', name: 'Spiced / corned silverside', kind: 'cured', fraction: 0.95, fractionRef: F.roastStyle, cookingId: 'cured' }] },
+      { id: 'round-steak', label: 'Round steaks', products: [steak({ id: 'silverside-round-steak', name: 'Round steak (silverside)', fraction: 0.929, fractionRef: { sourceIds: ['ahdb-yield-guide', 'tamu-rib-loin'], note: 'AHDB silver-gristle removed 97.8 % × 95 % cutting yield' }, ...usdaSteak(305, 'round, outside round, bottom round, steak'), defaultThicknessCm: 1.5, cookingId: 'braise' })] },
+      { id: 'diced', label: 'Diced stewing beef', products: [{ id: 'silverside-diced', name: 'Diced silverside', kind: 'diced', fraction: 0.95, fractionRef: F.dice95, cookingId: 'stew' }] },
       toMince(),
     ],
   },
@@ -401,15 +431,15 @@ export const REGIONS: Region[] = [
     name: 'Thick flank (knuckle)',
     aka: ['Ball of round', 'Knuckle', 'Round steak'],
     quarter: 'hind',
-    meatPctOfCarcass: ahdb(4.22),
+    meatPctOfCarcass: ahdb(4.22, '6.40 kg per side'),
     description: 'The front of the hind leg above the knee. Lean; Irish butchers sell it as ball of round for pot roasting, or as round steak.',
     defaultOption: 'pot-roast',
     diagramIds: ['thick-flank'],
     options: [
-      { id: 'pot-roast', label: 'Ball of round pot roasts', products: [{ id: 'ball-of-round', name: 'Ball of round (pot roast)', kind: 'roast', fraction: 0.85, cookingId: 'pot-roast' }] },
-      { id: 'round-steak', label: 'Round steaks', products: [steak({ id: 'thick-flank-steak', name: 'Round steak (thick flank)', fraction: 0.8, gramsPerCm: 110, defaultThicknessCm: 1.5, cookingId: 'flash-steak' })] },
-      { id: 'minute', label: 'Minute steaks / stir-fry', products: [steak({ id: 'thick-flank-minute', name: 'Minute steak', fraction: 0.8, gramsPerCm: 200, defaultThicknessCm: 0.6, allowedThicknessCm: [0.5, 0.6, 0.8, 1], cookingId: 'minute-steak' })] },
-      { id: 'diced', label: 'Diced', products: [{ id: 'thick-flank-diced', name: 'Diced thick flank', kind: 'diced', fraction: 0.85, cookingId: 'stew' }] },
+      { id: 'pot-roast', label: 'Ball of round pot roasts', products: [{ id: 'ball-of-round', name: 'Ball of round (pot roast)', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, cookingId: 'pot-roast' }] },
+      { id: 'round-steak', label: 'Round steaks', description: 'Cut from the centre-cut and plate muscles; the rest goes to dice/mince.', products: [steak({ id: 'thick-flank-steak', name: 'Round steak (thick flank)', fraction: 0.656, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB centre cut 2.01 + plate muscle 2.19 of 6.40 kg' }, ...usdaSteak(197, 'round, knuckle, tip center, steak'), defaultThicknessCm: 1.5, cookingId: 'flash-steak' })] },
+      { id: 'minute', label: 'Minute steaks / stir-fry', products: [steak({ id: 'thick-flank-minute', name: 'Minute steak', fraction: 0.656, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB centre cut + plate muscle' }, ...usdaSteak(197, 'round, knuckle, tip center, steak'), defaultThicknessCm: 0.6, allowedThicknessCm: THIN_CM, cookingId: 'minute-steak' })] },
+      { id: 'diced', label: 'Diced', products: [{ id: 'thick-flank-diced', name: 'Diced thick flank', kind: 'diced', fraction: 0.95, fractionRef: F.dice95, cookingId: 'stew' }] },
       toMince(),
     ],
   },
@@ -418,9 +448,8 @@ export const REGIONS: Region[] = [
     name: 'Thin flank',
     aka: ['Flank', 'Bavette', 'Skirt', 'Goose skirt', 'Inside skirt'],
     quarter: 'hind',
-    meatPctOfCarcass: ahdb(6.66, 'Thin flank (boneless, 3-bone)'),
-    description:
-      'The belly wall. Mostly mince, but it holds the bavette (flank steak) and two skirts, prized grilling cuts that are marinated, cooked hot and sliced across the grain.',
+    meatPctOfCarcass: ahdb(6.66, 'Thin flank (boneless, 3-bone), 10.09 kg per side'),
+    description: 'The belly wall. Mostly mince, but it holds the bavette (flank steak) and two skirts, prized grilling cuts that are marinated, cooked hot and sliced across the grain.',
     defaultOption: 'bavette',
     diagramIds: ['thin-flank'],
     options: [
@@ -428,11 +457,11 @@ export const REGIONS: Region[] = [
         id: 'bavette',
         label: 'Bavette & skirts out, rest to mince',
         products: [
-          { id: 'bavette', name: 'Bavette (flank steak)', kind: 'piece', fraction: 0.14, pieceGrams: 360, cookingId: 'flash-steak', notes: 'Whole bavette ≈ 1.4 kg per side, usually portioned' },
-          { id: 'flank-skirts', name: 'Skirt steak (goose & inside skirt)', kind: 'piece', fraction: 0.15, pieceGrams: 370, cookingId: 'flash-steak' },
+          { id: 'bavette', name: 'Bavette (flank steak), whole', kind: 'piece', fraction: 0.143, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB flank skirt (bavette) fully trimmed 1.44 of 10.09 kg' }, ...ahdbPiece(1440, 'bavette'), cookingId: 'flash-steak' },
+          { id: 'flank-skirts', name: 'Skirt steak (goose & inside skirt)', kind: 'piece', fraction: 0.148, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB goose skirt 0.77 + inside skirt 0.72 of 10.09 kg' }, ...ahdbPiece(745, 'goose / inside skirt (mean)'), cookingId: 'flash-steak' },
         ],
       },
-      { id: 'rolled', label: 'Rolled flank pot roast', products: [{ id: 'rolled-flank', name: 'Rolled flank', kind: 'roast', fraction: 0.7, cookingId: 'pot-roast' }] },
+      { id: 'rolled', label: 'Rolled flank pot roast', products: [{ id: 'rolled-flank', name: 'Rolled flank', kind: 'roast', fraction: 0.9, fractionRef: { sourceIds: ['ahdb-europ-yield'], note: 'AHDB 2010: pistola flank trimmed to 90 % visual lean' }, cookingId: 'pot-roast' }] },
       toMince('All to mince'),
     ],
   },
@@ -442,7 +471,7 @@ export const REGIONS: Region[] = [
     aka: ['Leg of beef', 'Shin', 'Heel', 'Osso buco'],
     quarter: 'hind',
     meatPctOfCarcass: ahdb(3.44, 'Hind shin 1.70 + heel muscle 1.74'),
-    bonePctOfCarcass: est(1.2, 'Hind shank bone for osso buco; estimate'),
+    bonePctOfCarcass: derived(0.88, ['usda-sr28', 'ahdb-yield-guide'], 'hind shin 1.70 % with shank crosscuts 34 % bone: 1.70 × 0.34 / 0.66'),
     description: 'The hind leg below the round and the heel muscle. Slow-cooking meat; cross-cut as osso buco or diced as shin / leg beef.',
     defaultOption: 'diced',
     diagramIds: ['hind-shin'],
@@ -450,27 +479,28 @@ export const REGIONS: Region[] = [
       {
         id: 'osso-buco',
         label: 'Osso buco + heel braising',
+        description: 'Osso buco is sold by weight: no measured slice weight exists. Uses the tibia, so fewer marrow bones are left.',
         products: [
-          steak({ id: 'hind-osso-buco', name: 'Osso buco (hind shin)', fraction: 0.47, boneFactor: 1.6, gramsPerCm: 120, defaultThicknessCm: 4, allowedThicknessCm: THICK_CM, cookingId: 'shin' }),
-          { id: 'heel-braise', name: 'Heel (leg) braising beef', kind: 'diced', fraction: 0.45, cookingId: 'shin' },
+          { id: 'hind-osso-buco', name: 'Osso buco (hind shin)', kind: 'piece', fraction: 0.494, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB hind shin 1.70 of 3.44 %' }, boneFactor: BONE.shank, weightOnly: true, defaultThicknessCm: 4, allowedThicknessCm: THICK_CM, cookingId: 'shin' },
+          { id: 'heel-braise', name: 'Heel (leg) braising beef', kind: 'diced', fraction: 0.481, fractionRef: { sourceIds: ['ahdb-yield-guide', 'ahdb-europ-yield'], note: 'AHDB heel 1.74 of 3.44 % × 95 % dicing yield' }, cookingId: 'shin' },
         ],
       },
-      { id: 'diced', label: 'Boneless shin & leg', products: [{ id: 'hind-shin-boneless', name: 'Shin / leg beef', kind: 'diced', fraction: 0.9, cookingId: 'shin' }] },
+      { id: 'diced', label: 'Boneless shin & leg', products: [{ id: 'hind-shin-boneless', name: 'Shin / leg beef', kind: 'diced', fraction: 0.95, fractionRef: F.dice95, cookingId: 'shin' }] },
       toMince(),
     ],
   },
 ];
 
 /** Lean trim (85 % VL) not attributable to a region — always goes to the trim pool (mince, burgers, diced). */
-export const TRIM_POOL_PCT_OF_CARCASS: Sourced = {
-  value: 8.41,
-  evidence: 'estimate',
-  sourceIds: ['ahdb-yield-guide'],
-  note: 'AHDB trim 11.41 % less 3.0 % attributed to the short-rib plate region',
-};
+export const TRIM_POOL_PCT_OF_CARCASS: Sourced = derived(10.622, ['ahdb-yield-guide', 'ncba-subprimal', 'usda-sr28'], 'AHDB trim 11.41 % less the 0.788 % short-rib plate meat');
 
 /** Total bone and fat in the AHDB reference carcass (% of carcass) — the pools bone-in cuts draw from. */
-export const REFERENCE_BONE_PCT: Sourced = { value: 16.17, evidence: 'verified', sourceIds: ['ahdb-yield-guide'] };
+export const REFERENCE_BONE_PCT: Sourced = {
+  value: 16.17,
+  evidence: 'verified',
+  sourceIds: ['ahdb-yield-guide', 'mla-bone', 'teagasc-dissection'],
+  note: 'AHDB R4H (fore rib bone held separately). Cross-checks: MLA boning-room bone 19–20 % (steer/cow/bull), Teagasc dissection 19.7 %',
+};
 export const REFERENCE_FAT_PCT: Sourced = { value: 5.78, evidence: 'verified', sourceIds: ['ahdb-yield-guide'] };
 
 export const REGION_BY_ID: Record<string, Region> = Object.fromEntries(REGIONS.map((r) => [r.id, r]));

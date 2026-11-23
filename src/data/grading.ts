@@ -170,3 +170,35 @@ export const AHDB_PER_SIDE_KG = {
   insideSkirt: 0.72,
   sourceIds: ['ahdb-yield-guide'],
 };
+
+/**
+ * Cull cow kill-out by body condition. USDA cull grades (UNL CAP 2021) give dressing on hot carcass incl.
+ * kidney/pelvic/heart fat and shrunk live weight: Breaker 52–54, Boner 50–52, Lean 45–49, Light 40–46 %.
+ * Irish basis removes kidney & pelvic fat before weighing (2017/1182 Art. 6(3); Alberta: US dressing runs
+ * 2.5–3.0 points higher for that reason) and uses cold weight = warm − 2 % (≈ 1 point at ~50 %).
+ * Irish-basis value = USDA midpoint − 2.75 − 1.0. Validation: Newford beef cull cows (O=4−) 48 %;
+ * Minchin 2009 Irish cull cows (n = 2163, mixed dairy/beef) 324 kg / 699 kg = 46.4 %.
+ */
+export const COW_KILLOUT_BY_FAT = {
+  usdaGrades: [
+    { grade: 'Light', fatClasses: ['1-', '1', '1+'] as FatClass[], usdaRangePct: [40, 46], irishPct: 39.3 },
+    { grade: 'Lean', fatClasses: ['2-', '2', '2+'] as FatClass[], usdaRangePct: [45, 49], irishPct: 43.3 },
+    { grade: 'Boner', fatClasses: ['3-', '3', '3+'] as FatClass[], usdaRangePct: [50, 52], irishPct: 47.3 },
+    { grade: 'Breaker', fatClasses: ['4-', '4', '4+', '5-', '5', '5+'] as FatClass[], usdaRangePct: [52, 54], irishPct: 49.3 },
+  ],
+  usToIrishPts: -3.75,
+  validation: [
+    { label: 'Newford suckler cull cows, O=4−', killOutPct: 48, sourceIds: ['teagasc-newford'] },
+    { label: 'Irish cull cows (Minchin 2009), 324 / 699 kg', killOutPct: 46.4, sourceIds: ['moreira-2021', 'minchin-2009'] },
+  ],
+  sourceIds: ['unl-cull-grades', 'alberta-dressing', 'eu-2017-1182', 'teagasc-newford', 'moreira-2021'],
+};
+
+/** Sourced kill-out adjustments used to derive values with no direct Irish measurement. */
+export const KILLOUT_ADJUSTMENTS = {
+  heiferVsSteerPts: { value: -1.75, range: [-2.0, -1.5], sourceIds: ['alberta-dressing'], note: 'Heifers dress 1.5–2.0 points lower than steers at similar fat' },
+  dairyVsBeefPts: { value: -3, sourceIds: ['alberta-dressing', 'umaine-1072'], note: 'Dairy cattle dress about 3 points lower than beef cattle' },
+  jerseyCrossVsHfPts: { value: -1.0, sourceIds: ['teagasc-5923'], note: 'Jersey × HF males 485 vs HF 495 g/kg' },
+  jerseyVsHolsteinRelative: { value: -0.051, sourceIds: ['jersey-bull-calves'], note: 'German Holstein bull calves dressed 5.1 % (relative) higher than Jersey' },
+  hotToColdPct: { value: -2, sourceIds: ['eu-2017-1182'] },
+};

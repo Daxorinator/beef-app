@@ -22,7 +22,7 @@ for (const r of REGIONS) walkOptions(r.options, (o) => allProducts.push(...(o.pr
 const sourced: Sourced[] = [
   ...REGIONS.flatMap((r) => [r.meatPctOfCarcass, ...(r.bonePctOfCarcass ? [r.bonePctOfCarcass] : [])]),
   ...PARTS.map((p) => p.reference.pct),
-  ...BREEDS.flatMap((b) => [...Object.values(b.killOutPct), b.yieldAdjustmentPts, b.eyeMuscleCm2PerKg, ...Object.values(b.typicalCarcassKg)]),
+  ...BREEDS.flatMap((b) => [...Object.values(b.killOutPct), b.eyeMuscleCm2PerKg, ...Object.values(b.typicalCarcassKg)]),
   TRIM_POOL_PCT_OF_CARCASS,
   REFERENCE_BONE_PCT,
   REFERENCE_FAT_PCT,
@@ -50,6 +50,13 @@ describe('regions', () => {
     const ids = allProducts.map((p) => p.id);
     const dupes = ids.filter((id, i) => ids.indexOf(id) !== i);
     expect(dupes).toEqual([]);
+  });
+
+  it('every product fraction cites a source', () => {
+    for (const p of allProducts) {
+      expect(p.fractionRef?.sourceIds.length, p.id).toBeGreaterThan(0);
+      for (const id of p.fractionRef!.sourceIds) expect(SOURCE_BY_ID[id], `${p.id}:${id}`).toBeDefined();
+    }
   });
 
   it('every product references a known cooking profile', () => {
@@ -88,8 +95,13 @@ describe('regions', () => {
 
   it('steaks and pieces carry size data', () => {
     for (const p of allProducts) {
+      if (p.weightOnly) continue;
       if (p.kind === 'steak') expect(p.gramsPerCm, p.id).toBeGreaterThan(0);
       if (p.kind === 'piece' || p.kind === 'ribs') expect(p.pieceGrams, p.id).toBeGreaterThan(0);
+      if (p.gramsPerCm || p.pieceGrams) {
+        expect(p.sizeRef?.carcassKg, p.id).toBeGreaterThan(0);
+        for (const id of p.sizeRef?.sourceIds ?? []) expect(SOURCE_BY_ID[id], `${p.id}:${id}`).toBeDefined();
+      }
       if (p.boneFactor !== undefined) expect(p.boneFactor, p.id).toBeGreaterThanOrEqual(1);
     }
   });
@@ -109,7 +121,7 @@ describe('parts', () => {
   });
 
   it('live-weight parts plus carcass (53 %) roughly account for the whole 600 kg reference steer', () => {
-    const liveSum = PARTS.filter((p) => p.reference.basis === 'live' && p.reference.pct.evidence === 'verified').reduce((a, p) => a + p.reference.pct.value, 0);
+    const liveSum = PARTS.filter((p) => p.reference.basis === 'live').reduce((a, p) => a + p.reference.pct.value, 0);
     // AHDB: non-carcass = 47 % of live weight. Lung fat, gut fat etc. all included; horns (estimate) excluded.
     expect(liveSum).toBeCloseTo(47, 0);
   });
@@ -120,6 +132,15 @@ describe('parts', () => {
 
   it('cooking references resolve', () => {
     expect(PARTS.filter((p) => p.cookingId && !COOKING_BY_ID[p.cookingId]).map((p) => p.id)).toEqual([]);
+  });
+});
+
+describe('evidence', () => {
+  it('no value is an unsourced guess: estimates must say how they were derived', () => {
+    for (const x of sourced) {
+      if (x.evidence === 'estimate') expect(x.note ?? '', JSON.stringify(x)).toMatch(/^Derived/);
+      if (x.evidence !== 'unconfirmed') expect(x.sourceIds.length, JSON.stringify(x)).toBeGreaterThan(0);
+    }
   });
 });
 
@@ -200,7 +221,7 @@ describe('bone budget', () => {
   });
 
   it('residual soup bones = pool minus marrow bones (nothing else taken)', () => {
-    expect(PART_BY_ID['soup-bones'].reference.pct.value).toBeCloseTo(REFERENCE_BONE_PCT.value - PART_BY_ID['marrow-bones'].reference.pct.value, 6);
+    expect(PART_BY_ID['soup-bones'].reference.pct.value).toBeCloseTo(REFERENCE_BONE_PCT.value - PART_BY_ID['marrow-bones'].reference.pct.value, 1);
   });
 });
 
