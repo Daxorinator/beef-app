@@ -214,6 +214,8 @@ button.link { background: none; border: 0; color: var(--accent); cursor: pointer
 .option-preview { font-size: 0.82rem; color: var(--ink-3); }
 .option-warn { font-size: 0.8rem; color: var(--warn); }
 .part { border-top: 1px dashed var(--line); margin-top: 14px; padding-top: 4px; }
+.quick-fill { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin: 4px 0 8px; }
+.quick-fill .chip { font-size: 0.8rem; padding: 3px 10px; }
 .rib-strip { display: flex; gap: 3px; margin: 6px 0 10px; }
 .rib-strip span { flex: 1; height: 22px; border-radius: 4px; }
 .alloc-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }

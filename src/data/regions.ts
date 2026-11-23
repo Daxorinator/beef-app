@@ -170,28 +170,12 @@ export const REGIONS: Region[] = [
     bonePctOfCarcass: ahdb(0.7, 'Fore rib bone-in 5.43 % less rolled 4.73 %'),
     description:
       'Ribs 7–10. The finest roasting joint on the bone, or cut into rib steaks (ribeye). Bone-in rib from cattle of any age is legal in Ireland (negligible BSE risk).',
-    defaultOption: 'ribeye',
+    defaultOption: 'mix',
     diagramIds: ['fore-rib'],
     options: [
-      { id: 'on-bone', label: 'Rib roast on the bone', products: [{ id: 'rib-roast-bone-in', name: 'Rib roast (on the bone)', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, boneFactor: BONE.foreRib, cookingId: 'prime-roast' }] },
-      { id: 'rolled', label: 'Rolled rib roast', products: [{ id: 'rolled-rib', name: 'Rolled rib roast', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, cookingId: 'prime-roast' }] },
-      { id: 'ribeye', label: 'Rib steaks (ribeye)', products: [steak({ id: 'ribeye-steak', name: 'Rib steak (ribeye)', aka: ['Scotch fillet', 'Entrecôte'], fraction: RIBEYE_STEAK_FRACTION, fractionRef: F.ribeyeFromRoll, ...usdaSteak(361, 'rib eye steak, boneless, lip-on'), cookingId: 'prime-steak' })] },
-      {
-        id: 'cote',
-        label: 'Côte de boeuf (bone-in rib steaks)',
-        products: [steak({ id: 'cote-de-boeuf', name: 'Côte de boeuf', fraction: RIB_BONE_IN_STEAK_FRACTION, fractionRef: F.ribBoneInSteaks, boneFactor: BONE.foreRib, ...usdaSteak(462, 'rib eye steak, bone-in, lip-on'), defaultThicknessCm: inch(2), allowedThicknessCm: THICK_CM, cookingId: 'thick-bone-in-steak' })],
-      },
-      {
-        id: 'tomahawk',
-        label: 'Tomahawk steaks',
-        description:
-          'Bone-in rib steak with the long rib bone left on and cleaned. Ask your butcher in advance. Weights shown are for côte de boeuf; the extra length of bone is not included because no measured figure exists.',
-        excludes: [{ path: 'plate', optionIds: ['short-ribs', 'jacobs-ladder'], reason: 'Tomahawk bones run down into the short-rib plate, so it can no longer be cut as bone-in short ribs.' }],
-        products: [steak({ id: 'tomahawk', name: 'Tomahawk steak', fraction: RIB_BONE_IN_STEAK_FRACTION, fractionRef: F.ribBoneInSteaks, boneFactor: BONE.foreRib, ...usdaSteak(462, 'rib eye steak, bone-in, lip-on (excl. long bone)'), defaultThicknessCm: inch(2), allowedThicknessCm: THICK_CM, cookingId: 'thick-bone-in-steak' })],
-      },
       {
         id: 'mix',
-        label: 'Rib by rib: mix roasts, côtes and steaks',
+        label: 'Rib by rib',
         description: 'Ribs 7–10 are cut one rib at a time, so each rib can go a different way: on-the-bone roast, rolled roast, côte de boeuf, tomahawk or rib steaks.',
         products: [],
         allocation: {
@@ -200,15 +184,15 @@ export const REGIONS: Region[] = [
           remainder: 'steaks',
           defaultsPerSide: { 'roast-on-bone': 2, cote: 1 },
           uses: [
-            { id: 'roast-on-bone', label: 'Rib roast on the bone', sizing: 'joints-of-units', product: { id: 'mix-rib-roast', name: 'Rib roast (on the bone)', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, boneFactor: BONE.foreRib, cookingId: 'prime-roast' } },
-            { id: 'rolled', label: 'Rolled rib roast', sizing: 'standard', product: { id: 'mix-rolled-rib', name: 'Rolled rib roast', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, cookingId: 'prime-roast' } },
-            { id: 'cote', label: 'Côte de boeuf (one per rib)', sizing: 'one-per-unit', product: steak({ id: 'mix-cote', name: 'Côte de boeuf', fraction: RIB_BONE_IN_STEAK_FRACTION, fractionRef: F.ribBoneInSteaks, boneFactor: BONE.foreRib, ...usdaSteak(462, 'rib eye steak, bone-in, lip-on'), defaultThicknessCm: undefined, allowedThicknessCm: undefined, cookingId: 'thick-bone-in-steak' }) },
+            { id: 'roast-on-bone', short: 'Roast on the bone', label: 'Rib roast on the bone', sizing: 'joints-of-units', product: { id: 'rib-roast-bone-in', name: 'Rib roast (on the bone)', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, boneFactor: BONE.foreRib, cookingId: 'prime-roast' } },
+            { id: 'rolled', short: 'Rolled roast', label: 'Rolled rib roast', sizing: 'standard', product: { id: 'rolled-rib', name: 'Rolled rib roast', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, cookingId: 'prime-roast' } },
+            { id: 'cote', short: 'Côte de boeuf', label: 'Côte de boeuf (one per rib)', sizing: 'one-per-unit', product: steak({ id: 'cote-de-boeuf', name: 'Côte de boeuf', fraction: RIB_BONE_IN_STEAK_FRACTION, fractionRef: F.ribBoneInSteaks, boneFactor: BONE.foreRib, ...usdaSteak(462, 'rib eye steak, bone-in, lip-on'), defaultThicknessCm: undefined, allowedThicknessCm: undefined, cookingId: 'thick-bone-in-steak' }) },
             {
-              id: 'tomahawk', label: 'Tomahawk (one per rib)', sizing: 'one-per-unit',
-              product: steak({ id: 'mix-tomahawk', name: 'Tomahawk steak', fraction: RIB_BONE_IN_STEAK_FRACTION, fractionRef: F.ribBoneInSteaks, boneFactor: BONE.foreRib, ...usdaSteak(462, 'rib eye steak, bone-in, lip-on (excl. long bone)'), defaultThicknessCm: undefined, allowedThicknessCm: undefined, cookingId: 'thick-bone-in-steak' }),
+              id: 'tomahawk', short: 'Tomahawk', label: 'Tomahawk (one per rib)', sizing: 'one-per-unit',
+              product: steak({ id: 'tomahawk', name: 'Tomahawk steak', fraction: RIB_BONE_IN_STEAK_FRACTION, fractionRef: F.ribBoneInSteaks, boneFactor: BONE.foreRib, ...usdaSteak(462, 'rib eye steak, bone-in, lip-on (excl. long bone)'), defaultThicknessCm: undefined, allowedThicknessCm: undefined, cookingId: 'thick-bone-in-steak' }),
               excludes: [{ path: 'plate', optionIds: ['short-ribs', 'jacobs-ladder'], reason: 'Tomahawk bones run down into the short-rib plate, so it can no longer be cut as bone-in short ribs.' }],
             },
-            { id: 'steaks', label: 'Rib steaks (boneless)', sizing: 'standard', product: steak({ id: 'mix-ribeye', name: 'Rib steak (ribeye)', aka: ['Scotch fillet', 'Entrecôte'], fraction: RIBEYE_STEAK_FRACTION, fractionRef: F.ribeyeFromRoll, ...usdaSteak(361, 'rib eye steak, boneless, lip-on'), cookingId: 'prime-steak' }) },
+            { id: 'steaks', short: 'Rib steaks', label: 'Rib steaks (boneless)', sizing: 'standard', product: steak({ id: 'ribeye-steak', name: 'Rib steak (ribeye)', aka: ['Scotch fillet', 'Entrecôte'], fraction: RIBEYE_STEAK_FRACTION, fractionRef: F.ribeyeFromRoll, ...usdaSteak(361, 'rib eye steak, boneless, lip-on'), cookingId: 'prime-steak' }) },
           ],
         },
       },

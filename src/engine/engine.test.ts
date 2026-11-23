@@ -11,6 +11,9 @@ import { compute } from './compute';
 import { resolveSelections } from './selections';
 import type { AppState } from './state';
 
+/** Every fore rib as boneless rib steaks. */
+const ALL_STEAKS = { allocations: { 'fore-rib': {} } };
+
 const base = (animal: Partial<Animal> = {}, rest: Partial<AppState> = {}): AppState => ({
   animal: { ...DEFAULT_ANIMAL, ...animal },
   selections: {},
@@ -118,7 +121,7 @@ describe('selections', () => {
     for (const region of REGIONS) expect(r.selections[region.id]).toBe(region.defaultOption);
   });
   it('tomahawk rules out short ribs on the plate and falls back with a notice', () => {
-    const r = resolveSelections({ 'fore-rib': 'tomahawk', plate: 'short-ribs' });
+    const r = compute(base({}, { selections: { plate: 'short-ribs' }, allocations: { 'fore-rib': { tomahawk: 1 } } })).resolved;
     expect(r.selections.plate).toBe('mince');
     expect(r.notices).toHaveLength(1);
   });
@@ -134,13 +137,13 @@ describe('selections', () => {
 
 describe('sizes and counts', () => {
   it('steak size never changes with share; counts halve', () => {
-    const whole = compute(base({ share: 'whole' }, { selections: { 'fore-rib': 'ribeye' } })).lines.find((l) => l.productId === 'ribeye-steak')!;
-    const half = compute(base({ share: 'half' }, { selections: { 'fore-rib': 'ribeye' } })).lines.find((l) => l.productId === 'ribeye-steak')!;
+    const whole = compute(base({ share: 'whole' }, ALL_STEAKS)).lines.find((l) => l.productId === 'ribeye-steak')!;
+    const half = compute(base({ share: 'half' }, ALL_STEAKS)).lines.find((l) => l.productId === 'ribeye-steak')!;
     expect(half.eachKg! / whole.eachKg!).toBeCloseTo(1, 1);
     expect(half.count! / whole.count!).toBeCloseTo(0.5, 1);
   });
   it('ribeye at 356 kg and 1" is the USDA 361 g', () => {
-    const r = compute(base({ weightBasis: 'carcass', weightKg: 356 }, { selections: { 'fore-rib': 'ribeye' }, prefs: { ...DEFAULT_PREFS, steakThicknessCm: inch(1) } }));
+    const r = compute(base({ weightBasis: 'carcass', weightKg: 356 }, { ...ALL_STEAKS, prefs: { ...DEFAULT_PREFS, steakThicknessCm: inch(1) } }));
     const l = r.lines.find((x) => x.productId === 'ribeye-steak')!;
     // count rounding moves eachKg a little off the nominal size
     expect(l.eachKg! * 1000).toBeGreaterThan(361 * 0.93);
@@ -167,8 +170,8 @@ describe('sizes and counts', () => {
 
 describe('bone and fat pools', () => {
   it('bone-in cuts reduce soup bones', () => {
-    const boned = compute(base({}, { selections: { loin: 'separate', 'fore-rib': 'ribeye' } })).balance;
-    const boneIn = compute(base({}, { selections: { loin: 't-bone', 'fore-rib': 'on-bone' } })).balance;
+    const boned = compute(base({}, { selections: { loin: 'separate' }, allocations: { 'fore-rib': {} } })).balance;
+    const boneIn = compute(base({}, { selections: { loin: 't-bone' }, allocations: { 'fore-rib': { 'roast-on-bone': 99 } } })).balance;
     expect(boneIn.soupBoneKg).toBeLessThan(boned.soupBoneKg);
     expect(boneIn.boneInCutsKg).toBeGreaterThan(boned.boneInCutsKg);
   });
@@ -223,7 +226,7 @@ describe('Teagasc home-kill heifer calibration (the realistic factor is derived 
     const r = compute(
       base(
         { breed: 'hereford-x-dairy', sex: 'heifer', ageMonths: c.ageMonths, weightBasis: 'carcass', weightKg: c.carcassKg, conformation: c.estimatedGrade.conformation, fatClass: c.estimatedGrade.fat, hangingDays: 21 },
-        { selections: { loin: 't-bone', 'fore-rib': 'on-bone', topside: 'split' } },
+        { selections: { loin: 't-bone', topside: 'split' }, allocations: { 'fore-rib': { 'roast-on-bone': 99 } } },
       ),
     );
     const [realistic, commercial] = r.balance.meatRangeKg;
@@ -258,7 +261,7 @@ describe('primal / trim split agrees with the AHDB 2010 grid', () => {
 
 describe('steak thickness drives the count', () => {
   it('thicker steaks: fewer, heavier, same total weight', () => {
-    const at = (cm: number) => compute(base({}, { selections: { 'fore-rib': 'ribeye' }, prefs: { ...DEFAULT_PREFS, steakThicknessCm: cm } })).lines.find((l) => l.productId === 'ribeye-steak')!;
+    const at = (cm: number) => compute(base({}, { ...ALL_STEAKS, prefs: { ...DEFAULT_PREFS, steakThicknessCm: cm } })).lines.find((l) => l.productId === 'ribeye-steak')!;
     const thin = at(inch(0.75));
     const thick = at(inch(1.5));
     expect(thick.count!).toBeLessThan(thin.count!);
@@ -266,7 +269,7 @@ describe('steak thickness drives the count', () => {
     expect(thick.weightKg).toBeCloseTo(thin.weightKg, 9);
   });
   it('a per-cut override beats the standard thickness', () => {
-    const r = compute(base({}, { selections: { 'fore-rib': 'ribeye' }, prefs: { ...DEFAULT_PREFS, thicknessOverrides: { 'ribeye-steak': inch(1.5) } } }));
+    const r = compute(base({}, { ...ALL_STEAKS, prefs: { ...DEFAULT_PREFS, thicknessOverrides: { 'ribeye-steak': inch(1.5) } } }));
     expect(r.lines.find((l) => l.productId === 'ribeye-steak')!.thicknessCm).toBe(inch(1.5));
   });
 });
@@ -314,11 +317,11 @@ it('a light live weight suggests it may be the carcass weight', () => {
 
 describe('anatomical count bounds (per side)', () => {
   const animals = BREEDS.flatMap((b) => (['steer', 'heifer', 'bull', 'cow'] as Sex[]).map((sex) => ({ breed: b.id, sex })));
-  const count = (sel: Record<string, string>, id: string, a: Partial<Animal>, cm?: number) =>
-    compute(base({ ...a, share: 'half' }, { selections: sel, prefs: { ...DEFAULT_PREFS, ...(cm ? { thicknessOverrides: { [id]: cm } } : {}) } })).lines.find((l) => l.productId === id)?.count ?? 0;
-  it.each(animals)('$breed $sex: bone-in rib steaks ≤ 4 (ribs 7–10) at 2"', (a) => {
-    expect(count({ 'fore-rib': 'cote' }, 'cote-de-boeuf', a, inch(2))).toBeLessThanOrEqual(4);
-    expect(count({ 'fore-rib': 'tomahawk' }, 'tomahawk', a, inch(2))).toBeLessThanOrEqual(4);
+  const count = (sel: Record<string, string>, id: string, a: Partial<Animal>, ribs?: Record<string, number>) =>
+    compute(base({ ...a, share: 'half' }, { selections: sel, allocations: ribs ? { 'fore-rib': ribs } : {} })).lines.find((l) => l.productId === id)?.count ?? 0;
+  it.each(animals)('$breed $sex: exactly one côte or tomahawk per rib, 4 ribs per side', (a) => {
+    expect(count({}, 'cote-de-boeuf', a, { cote: 99 })).toBe(4);
+    expect(count({}, 'tomahawk', a, { tomahawk: 99 })).toBe(4);
   });
   it.each(animals)('$breed $sex: one of each whole muscle; ≤ 3 short ribs', (a) => {
     expect(count({ loin: 'separate', 'loin/fillet': 'whole' }, 'whole-fillet', a)).toBe(1);
@@ -378,8 +381,8 @@ describe('fore rib, rib by rib', () => {
   it('defaults: per side 2 ribs roasted on the bone, 1 côte, 1 rib of steaks', () => {
     const r = run(undefined);
     expect(r.allocations[0].plan).toEqual({ 'roast-on-bone': 4, rolled: 0, cote: 2, tomahawk: 0, steaks: 2 });
-    expect(line(r, 'mix-cote')!.count).toBe(2);
-    expect(line(r, 'mix-cote')!.thicknessCm).toBeUndefined();
+    expect(line(r, 'cote-de-boeuf')!.count).toBe(2);
+    expect(line(r, 'cote-de-boeuf')!.thicknessCm).toBeUndefined();
   });
   it('the plan never exceeds the ribs available (8 whole, 4 half)', () => {
     const r = run({ 'roast-on-bone': 3, cote: 3, tomahawk: 3 }, 'half');
@@ -387,13 +390,13 @@ describe('fore rib, rib by rib', () => {
     expect(Object.values(r.allocations[0].plan).reduce((s, n) => s + n, 0)).toBe(4);
     expect(r.allocations[0].plan).toMatchObject({ 'roast-on-bone': 3, cote: 1, tomahawk: 0, steaks: 0 });
   });
-  it('all ribs to steaks equals the plain rib-steak option', () => {
-    const all = compute(base({}, { selections: { 'fore-rib': 'ribeye' } })).lines.find((l) => l.productId === 'ribeye-steak')!;
-    expect(line(run({}), 'mix-ribeye')!.weightKg).toBeCloseTo(all.weightKg, 9);
-  });
-  it('all ribs on the bone equals the plain on-the-bone option', () => {
-    const all = compute(base({}, { selections: { 'fore-rib': 'on-bone' } })).lines.find((l) => l.productId === 'rib-roast-bone-in')!;
-    expect(line(run({ 'roast-on-bone': 8 }), 'mix-rib-roast')!.weightKg).toBeCloseTo(all.weightKg, 9);
+  it('all ribs to one use gives only that product, at its full-cut yield', () => {
+    const ribs = (r: ReturnType<typeof run>) => r.lines.filter((l) => l.regionId === 'fore-rib').map((l) => l.productId);
+    expect(ribs(run({}))).toEqual(['ribeye-steak']);
+    expect(ribs(run({ 'roast-on-bone': 99 }))).toEqual(['rib-roast-bone-in']);
+    const r = run({ rolled: 99 });
+    const regionKg = (r.balance.carcassKg * REGION_BY_ID['fore-rib'].meatPctOfCarcass.value * r.comp.meatFactor) / 100;
+    expect(line(r, 'rolled-rib')!.weightKg).toBeCloseTo(regionKg * 0.95, 9);
   });
   it('a tomahawk rib rules out bone-in short ribs; none leaves them allowed', () => {
     expect(run({ tomahawk: 1 }, 'whole', { plate: 'short-ribs' }).resolved.selections.plate).toBe('mince');
@@ -401,7 +404,7 @@ describe('fore rib, rib by rib', () => {
   });
   it('joints are made of whole ribs and mass closes', () => {
     const r = run({ 'roast-on-bone': 4, rolled: 2, cote: 1, tomahawk: 1 });
-    const roast = line(r, 'mix-rib-roast')!;
+    const roast = line(r, 'rib-roast-bone-in')!;
     expect(roast.cutNote).toMatch(/-rib joint/);
     const b = r.balance;
     expect(b.meatKg + b.fatPoolKg + b.marrowKg + b.soupBoneKg + b.hangingLossKg + b.cuttingLossKg + b.butcherTrimKg).toBeCloseTo(b.carcassKg, 6);

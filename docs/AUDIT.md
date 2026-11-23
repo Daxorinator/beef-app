@@ -50,7 +50,7 @@ The rule now enforced is that a US retail-cutting yield is applied only to the A
 | Product | Before | After | Basis | Outcome |
 |---|---|---|---|---|
 | Rib steak (ribeye) | 0.845 of the whole rolled fore rib | **0.378** | AHDB rib eye roll 2.82 of 7.17 kg × 96.2 % boneless-roll steak yield (Texas A&M). Assumes AHDB's rib eye roll ≈ eye + cap of a USDA lip-on steak. | 🔧 Count 36 → 14 per animal at 2.5 cm (7 per side). |
-| Côte de boeuf / tomahawk | 0.888 | **0.384** | Rib eye roll share × 1.10 (USDA bone-in steak lean 397 g vs lip-on 361 g) × 88.8 % bone-in steak yield. | 🔧 About 3 per side at 5 cm. **Test: ≤ 4 per side (ribs 7–10)** for every breed and sex. |
+| Côte de boeuf / tomahawk | 0.888 | **0.384** | Rib eye roll share × 1.10 (USDA bone-in steak lean 397 g vs lip-on 361 g) × 88.8 % bone-in steak yield. | 🔧 Now planned rib by rib: exactly one per rib, 4 ribs per side (tested for every breed and sex). |
 | Rolled rib + rib steaks | 0.411 + 0.463 | **0.475 + 0.189** | Half the fore rib as a rolled roast (95 %), the other half's rib eye as steaks. | 🔧 |
 | T-bone | 0.85 of the whole loin | **0.532** T-bone + **0.198** wing-rib steaks + **0.101** fillet-head steaks | T-bones come from the short loin only: the lumbar 6/9 of the AHDB 3-rib striploin + middle fillet + tail. The wing-rib end (ribs 11–13) has no fillet. The fillet head (1.04 kg) sits under the rump. | 🔧 T-bones 51 → about 28 per animal (14 per side) at 2.5 cm. |
 | Rump steaks (whole rump) | 0.811 incl. the tail | **0.656** steaks + **0.182** tri-tip whole | Tri-tip is a separate muscle (AHDB 1.42 of 7.41 kg). | 🔧 |

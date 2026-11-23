@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { PRESETS } from '../data/presets';
+import { PRESETS, type Preset } from '../data/presets';
 import { REGION_BY_ID, REGIONS } from '../data/regions';
 import { compute, type AllocationInfo, type BalanceInfo, type EngineResult, type Line } from '../engine/compute';
 import { exclusionReason, optionsAt } from '../engine/selections';
@@ -19,6 +19,7 @@ interface Props {
   onThickness: (productId: string, cm: number) => void;
   onRoastCount: (path: string, roasts: number) => void;
   onAllocation: (path: string, plan: Record<string, number>) => void;
+  onPreset: (p: Preset) => void;
 }
 
 function summarise(lines: Line[]): string {
@@ -74,6 +75,11 @@ function AllocationPicker({ info, lines, sides, onChange }: { info: AllocationIn
     for (const u of al.uses) if (u.id !== al.remainder) next[u.id] = u.id === useId ? n : plan[u.id];
     onChange(next);
   };
+  const setAll = (useId: string) => {
+    const next: Record<string, number> = {};
+    for (const u of al.uses) if (u.id !== al.remainder) next[u.id] = u.id === useId ? totalUnits : 0;
+    onChange(next);
+  };
   const lineOf = (productId: string) => lines.find((l) => l.productId === productId);
   const describe = (productId: string) => {
     const l = lineOf(productId);
@@ -87,6 +93,12 @@ function AllocationPicker({ info, lines, sides, onChange }: { info: AllocationIn
   return (
     <div className="part allocation">
       <h3>Plan your {many} <span className="opt">{units(totalUnits)}{sides === 2 ? ` (${al.unitsPerSide} per side)` : ''}</span></h3>
+      <div className="quick-fill" role="group" aria-label={`Give all ${many} to`}>
+        <span className="opt">All {many}:</span>
+        {al.uses.map((u) => (
+          <button key={u.id} className={`chip${plan[u.id] === totalUnits ? ' on' : ''}`} onClick={() => setAll(u.id)}>{u.short}</button>
+        ))}
+      </div>
       <div className="rib-strip" aria-hidden="true">
         {strip.map((s, i) => (
           <span key={i} style={{ background: USE_COLOURS[s.idx % USE_COLOURS.length] }} />
@@ -153,7 +165,7 @@ function BalancePicker({ b, lines, familySize, onChange }: { b: BalanceInfo; lin
   );
 }
 
-export function CutsStep({ state, result, region: regionId, onRegion, onSelections, onThickness, onRoastCount, onAllocation }: Props) {
+export function CutsStep({ state, result, region: regionId, onRegion, onSelections, onThickness, onRoastCount, onAllocation, onPreset }: Props) {
   const region = REGION_BY_ID[regionId];
   const sel = result.resolved.selections;
   const top = sel[region.id];
@@ -169,7 +181,7 @@ export function CutsStep({ state, result, region: regionId, onRegion, onSelectio
       <div className="presets">
         <span className="presets-label">Start from:</span>
         {PRESETS.map((p) => (
-          <button key={p.id} className="chip" title={p.description} onClick={() => onSelections(p.selections)}>{p.label}</button>
+          <button key={p.id} className="chip" title={p.description} onClick={() => onPreset(p)}>{p.label}</button>
         ))}
       </div>
 
@@ -205,8 +217,12 @@ export function CutsStep({ state, result, region: regionId, onRegion, onSelectio
             </p>
           </header>
 
-          <h3>What would you like?</h3>
-          <OptionList state={state} path={region.id} options={region.options} current={top} result={result} onPick={(id) => pick(region.id, id)} />
+          {region.options.length > 1 && (
+            <>
+              <h3>What would you like?</h3>
+              <OptionList state={state} path={region.id} options={region.options} current={top} result={result} onPick={(id) => pick(region.id, id)} />
+            </>
+          )}
 
           {topOpt.parts?.map((part) => (
             <div key={part.id} className="part">

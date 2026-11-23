@@ -182,6 +182,8 @@ export interface CutOption {
 export interface AllocationUse {
   id: string;
   label: string;
+  /** Short label for the 'all to …' buttons. */
+  short: string;
   product: ProductSpec;
   /**
    * 'one-per-unit': one item per unit, e.g. a côte de boeuf per rib bone (count fixed by anatomy, no thickness).
