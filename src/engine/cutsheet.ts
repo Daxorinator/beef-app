@@ -2,6 +2,7 @@
 import { BREED_BY_ID } from '../data/breeds';
 import { REGIONS } from '../data/regions';
 import { inchLabel } from '../data/thickness';
+import { loinInstructions } from './loin';
 import type { CutSheet } from '../model/types';
 import type { EngineResult, Line } from './compute';
 import type { AppState } from './state';
@@ -42,6 +43,7 @@ export function buildCutSheet(state: AppState, r: EngineResult): CutSheet {
     const regionLines = r.lines.filter((l) => l.regionId === region.id);
     const leaves = r.resolved.leaves.filter((x) => x.region.id === region.id);
     const instructions: string[] = [];
+    for (const lp of r.loinPlans.filter((x) => x.path === region.id)) instructions.push(...loinInstructions(lp.plan));
     for (const leaf of leaves) {
       const ls = regionLines.filter((l) => l.path === leaf.path);
       const prefix = leaf.part ? `${leaf.part.name}: ` : '';

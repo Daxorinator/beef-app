@@ -4,7 +4,7 @@
 // AHDB primals are trimmed to ≤ 10 mm fat; US retail cutting tests start from IMPS subprimals at a similar packer
 // trim, so their measured retail-cut shares (excluding lean trim, which goes to the mince pool here) are applied.
 import type { CutOption, ProductSpec, Region, Sourced } from '../model/types';
-import { FILLET_CM, inch, STANDARD_STEAK_CM, STEAK_CM, THICK_CM, THIN_CM } from './thickness';
+import { inch, STANDARD_STEAK_CM, STEAK_CM, THICK_CM, THIN_CM } from './thickness';
 
 const ahdb = (value: number, note?: string): Sourced => ({ value, evidence: 'verified', sourceIds: ['ahdb-yield-guide'], note });
 const derived = (value: number, sourceIds: string[], note: string): Sourced => ({ value, evidence: 'estimate', sourceIds, note: `Derived: ${note}` });
@@ -17,8 +17,10 @@ const usdaSteak = (gramsAt254: number, cut: string): Pick<ProductSpec, 'gramsPer
   sizeRef: { carcassKg: 356, sourceIds: ['usda-sr28', 'west-ndi-chuck'], note: `USDA SR28 "${cut}" ${gramsAt254} g per 2.54 cm steak` },
 });
 /** AHDB per-side muscle weight used as a whole-piece size. */
-const ahdbPiece = (grams: number, what: string): Pick<ProductSpec, 'pieceGrams' | 'sizeRef'> => ({
+/** AHDB per-side muscle weight used as a whole-piece size; a whole muscle is one per side. */
+const ahdbPiece = (grams: number, what: string, perSide = 1): Pick<ProductSpec, 'pieceGrams' | 'sizeRef' | 'perSide'> => ({
   pieceGrams: grams,
+  perSide,
   sizeRef: { carcassKg: 303, sourceIds: ['ahdb-yield-guide'], note: `AHDB ${what}, per side` },
 });
 
@@ -225,8 +227,8 @@ export const REGIONS: Region[] = [
     defaultOption: 'mince',
     diagramIds: ['plate'],
     options: [
-      { id: 'short-ribs', label: 'Short ribs (cut between the bones)', products: [{ id: 'short-ribs', name: 'Short rib (single bone)', kind: 'ribs', fraction: 1, fractionRef: { sourceIds: ['ncba-subprimal'], note: 'Region is defined as the NCBA 3-rib short rib' }, boneFactor: BONE.shortRibs, pieceGrams: 658, sizeRef: { carcassKg: 358, sourceIds: ['ncba-subprimal'], note: '8.7 lb per carcass ÷ 6 bones (3 per side), bone-in' }, cookingId: 'ribs' }] },
-      { id: 'jacobs-ladder', label: "Jacob's ladder (3-bone rack)", products: [{ id: 'jacobs-ladder', name: "Jacob's ladder (3-bone rack)", kind: 'ribs', fraction: 1, fractionRef: { sourceIds: ['ncba-subprimal'], note: 'Whole 3-rib short rib per side' }, boneFactor: BONE.shortRibs, pieceGrams: 1974, sizeRef: { carcassKg: 358, sourceIds: ['ncba-subprimal'], note: '8.7 lb per carcass ÷ 2 sides, bone-in' }, cookingId: 'ribs' }] },
+      { id: 'short-ribs', label: 'Short ribs (cut between the bones)', products: [{ id: 'short-ribs', name: 'Short rib (single bone)', kind: 'ribs', fraction: 1, fractionRef: { sourceIds: ['ncba-subprimal'], note: 'Region is defined as the NCBA 3-rib short rib' }, boneFactor: BONE.shortRibs, perSide: 3, pieceGrams: 658, sizeRef: { carcassKg: 358, sourceIds: ['ncba-subprimal'], note: '8.7 lb per carcass ÷ 6 bones (3 per side), bone-in' }, cookingId: 'ribs' }] },
+      { id: 'jacobs-ladder', label: "Jacob's ladder (3-bone rack)", products: [{ id: 'jacobs-ladder', name: "Jacob's ladder (3-bone rack)", kind: 'ribs', fraction: 1, fractionRef: { sourceIds: ['ncba-subprimal'], note: 'Whole 3-rib short rib per side' }, boneFactor: BONE.shortRibs, perSide: 1, pieceGrams: 1974, sizeRef: { carcassKg: 358, sourceIds: ['ncba-subprimal'], note: '8.7 lb per carcass ÷ 2 sides, bone-in' }, cookingId: 'ribs' }] },
       { id: 'boneless', label: 'Boneless short rib', products: [{ id: 'boneless-short-rib', name: 'Boneless short rib', kind: 'piece', fraction: 0.93, fractionRef: { sourceIds: ['usda-sr28'], note: 'Boneless short ribs, refuse 7 % connective tissue' }, pieceGrams: 432, sizeRef: { carcassKg: 356, sourceIds: ['usda-sr28'], note: 'USDA SR28 "chuck, short ribs, boneless" 432 g per piece' }, cookingId: 'braise' }] },
       toMince(),
     ],
@@ -257,73 +259,16 @@ export const REGIONS: Region[] = [
     meatPctOfCarcass: ahdb(6.41, 'Striploin 4.49 + fillet 1.92'),
     bonePctOfCarcass: derived(Math.round((T_BONE.tBone * (BONE.tBone - 1) + T_BONE.wingRib * (BONE.stripBoneIn - 1)) * 6.41 * 1000) / 1000, ['usda-sr28', 'tamu-rib-loin', 'ahdb-yield-guide'], 'bone carried by T-bones (25 % refuse) and wing-rib steaks (10 %) on their AHDB lean shares of the 6.41 % loin'),
     description:
-      'The most valuable cuts. Either cut through the bone as T-bone and porterhouse (sirloin and fillet together), or take the fillet out and keep the sirloin and fillet separate. You cannot have both from the same side. T-bones are legal from cattle of any age in Ireland.',
-    defaultOption: 'separate',
+      'The most valuable cuts. Cut through the bone as T-bone and porterhouse (sirloin and fillet together), or take the fillet out and keep the sirloin and fillet separate, or mix the two: a few T-bones from the front of the short loin, then the fillet out. A Wellington needs the centre fillet intact. T-bones are legal from cattle of any age in Ireland.',
+    defaultOption: 'plan',
     diagramIds: ['loin'],
     options: [
       {
-        id: 't-bone',
-        label: 'T-bone & porterhouse steaks',
-        description: 'Sirloin and fillet on the bone. Choosing T-bones means no separate fillet or sirloin steaks from this side.',
-        products: [
-          steak({ id: 't-bone', name: 'T-bone / porterhouse steak', fraction: T_BONE.tBone, fractionRef: { sourceIds: ['ahdb-yield-guide', 'tamu-rib-loin'], note: 'Short loin only: lumbar two-thirds of the AHDB 3-rib striploin (6 lumbar of 9 vertebrae) + middle fillet 1.25 + fillet tail 0.29 kg, × strip-steak yield 85 %. Check: ≈ 16 per side at 2.5 cm' }, boneFactor: BONE.tBone, ...usdaSteak(460, 'short loin, t-bone steak (porterhouse 534 g)'), cookingId: 'prime-steak' }),
-          steak({ id: 'wing-rib-steak', name: 'Wing rib (club) steak, on the bone', fraction: T_BONE.wingRib, fractionRef: { sourceIds: ['ahdb-yield-guide', 'tamu-rib-loin'], note: 'Rib-end third of the AHDB 3-rib striploin (ribs 11–13 have no fillet) × strip-steak yield 85 %' }, boneFactor: BONE.stripBoneIn, gramsPerCm: Math.round((302 / 0.9 / 2.54) * 10) / 10, sizeRef: { carcassKg: 356, sourceIds: ['usda-sr28'], note: 'USDA top loin steak 302 g boneless ÷ (1 − 10 % bone)' }, cookingId: 'prime-steak' }),
-          steak({ id: 'fillet-head-steak', name: 'Fillet steak (from the head)', fraction: T_BONE.filletHead, fractionRef: { sourceIds: ['ahdb-yield-guide', 'steele-2020'], note: 'AHDB rump fillet 1.04 kg (sits under the rump, not in T-bones) × 94 % steak yield' }, gramsPerCm: 45.3, sizeRef: { carcassKg: 356, sourceIds: ['steele-2020'] }, defaultThicknessCm: inch(1.5), allowedThicknessCm: FILLET_CM, cookingId: 'fillet' }),
-        ],
-        advisories: [{ id: 't-bone-small', when: { breed: ['jersey'] }, severity: 'tip', message: 'Jersey loins are small: T-bones will be modest in size. Consider 1¼" or thicker.', sourceIds: ['teagasc-5923'] }],
-      },
-      {
-        id: 'separate',
-        label: 'Separate sirloin and fillet',
-        parts: [
-          {
-            id: 'striploin',
-            name: 'Sirloin (striploin)',
-            share: 0.7,
-            defaultOption: 'sirloin-steaks',
-            options: [
-              { id: 'sirloin-steaks', label: 'Sirloin steaks', products: [steak({ id: 'sirloin-steak', name: 'Sirloin (striploin) steak', aka: ['Striploin steak', 'Entrecôte'], fraction: 0.85, fractionRef: F.stripSteaks, ...usdaSteak(302, 'loin, top loin steak, boneless, lip-on'), cookingId: 'prime-steak' })] },
-              { id: 'sirloin-roast', label: 'Sirloin roast (boneless)', products: [{ id: 'sirloin-roast', name: 'Sirloin roast', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, cookingId: 'prime-roast' }] },
-              { id: 'wing-rib', label: 'Wing rib (sirloin on the bone) roast', products: [{ id: 'wing-rib', name: 'Wing rib roast (on the bone)', kind: 'roast', fraction: 0.95, fractionRef: F.roastStyle, boneFactor: BONE.stripBoneIn, cookingId: 'prime-roast' }] },
-              {
-                id: 'split',
-                label: 'Sirloin roasts + sirloin steaks (you choose the mix)',
-                balance: { roastId: 'sirloin-roast-half', steakId: 'sirloin-steak-half' },
-                products: [
-                  { id: 'sirloin-roast-half', name: 'Sirloin roast', kind: 'roast', fraction: 0.475, fractionRef: { sourceIds: ['tamu-rib-loin'], note: 'Half at roast yield 95 %' }, cookingId: 'prime-roast' },
-                  steak({ id: 'sirloin-steak-half', name: 'Sirloin (striploin) steak', fraction: 0.425, fractionRef: { sourceIds: ['tamu-rib-loin'], note: 'Half at strip-steak yield 85 %' }, ...usdaSteak(302, 'loin, top loin steak, boneless, lip-on'), cookingId: 'prime-steak' }),
-                ],
-              },
-            ],
-          },
-          {
-            id: 'fillet',
-            name: 'Fillet',
-            share: 0.3,
-            defaultOption: 'steaks',
-            options: [
-              {
-                id: 'steaks',
-                label: 'Fillet steaks + tail for stir-fry',
-                products: [
-                  steak({ id: 'fillet-steak', name: 'Fillet steak', aka: ['Tournedos', 'Medallion'], fraction: 0.734, fractionRef: { sourceIds: ['ahdb-yield-guide', 'steele-2020'], note: 'Chain off 88.7 % (AHDB) × steaks 94 % of trimmed tenderloin (Steele 2020: 61–63 % of 65 %) less tail' }, gramsPerCm: 45.3, sizeRef: { carcassKg: 356, sourceIds: ['steele-2020'], note: '170.1 g steaks at 35.5–39.6 mm across ribeye-area categories' }, defaultThicknessCm: inch(1.5), allowedThicknessCm: FILLET_CM, cookingId: 'fillet' }),
-                  { id: 'fillet-tail', name: 'Fillet tail (stir-fry / stroganoff)', kind: 'piece', fraction: 0.1, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB fillet tail 0.29 of 2.91 kg' }, ...ahdbPiece(290, 'fillet tail'), cookingId: 'fillet' },
-                ],
-              },
-              { id: 'whole', label: 'Whole fillet (Wellington / roast)', products: [{ id: 'whole-fillet', name: 'Whole fillet', kind: 'piece', fraction: 0.887, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB fillet without chain 2.58 of 2.91 kg' }, ...ahdbPiece(2580, 'fillet, chain off'), cookingId: 'fillet' }] },
-              {
-                id: 'chateaubriand',
-                label: 'Chateaubriand + fillet steaks',
-                description: 'The thick centre cut kept whole as a roasting piece; the head as steaks.',
-                products: [
-                  { id: 'chateaubriand', name: 'Chateaubriand (centre fillet)', kind: 'piece', fraction: 0.43, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB middle fillet 1.25 of 2.91 kg' }, ...ahdbPiece(1250, 'middle fillet'), cookingId: 'fillet' },
-                  steak({ id: 'fillet-steak-c', name: 'Fillet steak', fraction: 0.336, fractionRef: { sourceIds: ['ahdb-yield-guide', 'steele-2020'], note: 'AHDB rump fillet 1.04 of 2.91 kg × 94 % steak yield' }, gramsPerCm: 45.3, sizeRef: { carcassKg: 356, sourceIds: ['steele-2020'] }, defaultThicknessCm: inch(1.5), allowedThicknessCm: FILLET_CM, cookingId: 'fillet' }),
-                  { id: 'fillet-tail-c', name: 'Fillet tail (stir-fry)', kind: 'piece', fraction: 0.1, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB fillet tail' }, ...ahdbPiece(290, 'fillet tail'), cookingId: 'fillet' },
-                ],
-              },
-            ],
-          },
-        ],
+        id: 'plan',
+        label: 'Plan the loin',
+        description: 'Choose T-bones and porterhouses, whole or centre fillets (Wellington, chateaubriand) and sirloin joints; the rest becomes fillet and sirloin steaks.',
+        products: [],
+        loinPlanner: true,
       },
     ],
   },
@@ -490,7 +435,7 @@ export const REGIONS: Region[] = [
         label: 'Bavette & skirts out, rest to mince',
         products: [
           { id: 'bavette', name: 'Bavette (flank steak), whole', kind: 'piece', fraction: 0.143, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB flank skirt (bavette) fully trimmed 1.44 of 10.09 kg' }, ...ahdbPiece(1440, 'bavette'), cookingId: 'flash-steak' },
-          { id: 'flank-skirts', name: 'Skirt steak (goose & inside skirt)', kind: 'piece', fraction: 0.148, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB goose skirt 0.77 + inside skirt 0.72 of 10.09 kg' }, ...ahdbPiece(745, 'goose / inside skirt (mean)'), cookingId: 'flash-steak' },
+          { id: 'flank-skirts', name: 'Skirt steak (goose & inside skirt)', kind: 'piece', fraction: 0.148, fractionRef: { sourceIds: ['ahdb-yield-guide'], note: 'AHDB goose skirt 0.77 + inside skirt 0.72 of 10.09 kg' }, ...ahdbPiece(745, 'goose / inside skirt (mean)', 2), cookingId: 'flash-steak' },
         ],
       },
       { id: 'rolled', label: 'Rolled flank pot roast', products: [{ id: 'rolled-flank', name: 'Rolled flank', kind: 'roast', fraction: 0.9, fractionRef: { sourceIds: ['ahdb-europ-yield'], note: 'AHDB 2010: pistola flank trimmed to 90 % visual lean' }, cookingId: 'pot-roast' }] },

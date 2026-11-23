@@ -140,6 +140,8 @@ export interface ProductSpec {
   pieceGrams?: number;
   /** Where the size figure comes from and the carcass weight it was measured at (scale by cross-section). */
   sizeRef?: { carcassKg: number; sourceIds: string[]; note?: string };
+  /** Whole muscles / anatomical pieces: exactly this many per side, whatever the weight (e.g. 1 tri-tip, 3 short ribs). */
+  perSide?: number;
   /** No sourced piece size exists: report weight only, never a count. */
   weightOnly?: boolean;
   /** Provenance of `fraction` (usable share after trimming / of muscle). */
@@ -177,6 +179,8 @@ export interface CutOption {
    * the `remainder` use. When set, `products` is empty.
    */
   allocation?: Allocation;
+  /** The loin planner (T-bones, fillets, sirloin); see engine/loin.ts. When set, `products` is empty. */
+  loinPlanner?: boolean;
 }
 
 export interface AllocationUse {

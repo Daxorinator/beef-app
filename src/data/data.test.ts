@@ -6,6 +6,7 @@ import { BREEDS } from './breeds';
 import { COOKING_BY_ID } from './cooking';
 import { AHDB_PER_SIDE_KG as K, AHDB_REFERENCE_CARCASS } from './grading';
 import { CUTTING_LOSS_PCT, DICED_LEAN_PCT, FREEZER_LITRES_PER_KG, HOME_BUTCHER_FACTOR, TRIM_POOL_LEAN_PCT } from './model-constants';
+import { LOIN_PER_SIDE_KG as L, LOIN_PRODUCTS, TAIL_SECTION_OF_SHORT_LOIN, WING_SHARE_OF_STRIPLOIN } from './loin';
 import { PART_BY_ID, PARTS } from './parts';
 import { REFERENCE_BONE_PCT, REFERENCE_FAT_PCT, REGION_BY_ID, REGIONS, TRIM_POOL_PCT_OF_CARCASS } from './regions';
 import { SOURCE_BY_ID } from './sources';
@@ -18,6 +19,7 @@ function walkOptions(options: CutOption[], visit: (o: CutOption, path: string) =
 }
 
 const allProducts: ProductSpec[] = [];
+allProducts.push(...Object.values(LOIN_PRODUCTS));
 for (const r of REGIONS) walkOptions(r.options, (o) => allProducts.push(...(o.products ?? []), ...(o.allocation?.uses.map((u) => u.product) ?? [])));
 
 const sourced: Sourced[] = [
@@ -32,6 +34,8 @@ const sourced: Sourced[] = [
   HOME_BUTCHER_FACTOR,
   TRIM_POOL_LEAN_PCT,
   DICED_LEAN_PCT,
+  TAIL_SECTION_OF_SHORT_LOIN,
+  WING_SHARE_OF_STRIPLOIN,
 ];
 
 describe('sources', () => {
@@ -191,14 +195,14 @@ describe('muscle-based shares match AHDB per-side kg (kg ÷ kg)', () => {
     ['picanha share', () => partShare('rump/split', 'picanha'), K.rumpCap / K.rumpRegion],
     ['tri-tip share', () => partShare('rump/split', 'tri-tip'), K.rumpTail / K.rumpRegion],
     ['prime rump + bistro share', () => partShare('rump/split', 'prime-rump'), (K.primeRump + K.rumpBistro + (K.rumpRegion - K.rumpCap - K.rumpTail - K.primeRump - K.rumpBistro)) / K.rumpRegion],
-    ['striploin share', () => partShare('loin/separate', 'striploin'), K.striploin / K.loinRegion],
-    ['fillet share', () => partShare('loin/separate', 'fillet'), K.fillet / K.loinRegion],
+    ['loin planner: striploin share', () => L.striploin / L.total, K.striploin / K.loinRegion],
+    ['loin planner: fillet share', () => (L.filletTail + L.filletMiddle + L.filletHead + L.filletChain) / L.total, K.fillet / K.loinRegion],
     ['eye of round share', () => partShare('silverside/split', 'eye-of-round'), K.salmonCut / K.silverside],
     ['denver fraction', () => fraction('chuck/denver', 'denver-steak'), K.denver / K.chuckRegion],
     ['bavette fraction', () => fraction('thin-flank/bavette', 'bavette'), K.bavette / K.thinFlank],
     ['skirts fraction', () => fraction('thin-flank/bavette', 'flank-skirts'), (K.gooseSkirt + K.insideSkirt) / K.thinFlank],
-    ['fillet tail fraction', () => fraction('loin/separate/fillet/steaks', 'fillet-tail'), K.filletTail / K.fillet],
-    ['chateaubriand fraction', () => fraction('loin/separate/fillet/chateaubriand', 'chateaubriand'), K.middleFillet / K.fillet],
+    ['loin planner: fillet tail', () => L.filletTail / (L.total - L.striploin), K.filletTail / K.fillet],
+    ['loin planner: centre fillet', () => L.filletMiddle / (L.total - L.striploin), K.middleFillet / K.fillet],
   ])('%s', (_name, actual, expected) => {
     expect(Math.abs(actual() - expected)).toBeLessThanOrEqual(tol);
   });

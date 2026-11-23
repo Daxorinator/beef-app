@@ -5,12 +5,14 @@ import { COOKING_BY_ID } from '../data/cooking';
 import { PART_BY_ID } from '../data/parts';
 import { FREEZER_LITRES_PER_KG, DICED_LEAN_PCT, TRIM_POOL_LEAN_PCT } from '../data/model-constants';
 import { QPS_SPEC } from '../data/grading';
+import { LOIN_PRODUCTS } from '../data/loin';
 import { inchLabel, STANDARD_STEAK_CM } from '../data/thickness';
 import { REGION_BY_ID, REGIONS, TRIM_POOL_PCT_OF_CARCASS } from '../data/regions';
 import type { Advisory, Allocation, AllocationUse, ButcherPrefs, MassBalance, ProductLine, ProductSpec } from '../model/types';
 import { carcassAndLive, composition, effectiveGrade, type Composition, type Grade } from './carcass';
 import { matches } from './conditions';
 import { allPartInfo, partKg, type PartInfo } from './parts';
+import { planLoin, type LoinPlan } from './loin';
 import { optionsAt, resolveSelections, type ExtraExclusion, type ResolvedSelections } from './selections';
 import type { AppState } from './state';
 
@@ -58,6 +60,7 @@ export interface BalanceInfo {
 }
 
 export interface EngineResult {
+  loinPlans: { path: string; plan: LoinPlan }[];
   balances: BalanceInfo[];
   allocations: AllocationInfo[];
   resolved: ResolvedSelections;
@@ -145,7 +148,18 @@ function sizeByUnits(line: Line, p: ProductSpec, units: number, sizing: 'one-per
   line.sizeNote = `${units} ${units === 1 ? unit[0] : unit[1]} on the bone, as ${joints} joint${joints > 1 ? 's' : ''} for ${prefs.familySize} people`;
 }
 
-function sizeProduct(line: Line, p: ProductSpec, wholeCarcassKg: number, prefs: ButcherPrefs): void {
+/** A chosen number of items (on-bone steaks, fillet pieces, chosen joints): size each from the weight. */
+function sizeFixedCount(line: Line, p: ProductSpec, count: number, prefs: ButcherPrefs): void {
+  line.count = count;
+  line.eachKg = line.weightKg / count;
+  const steak = p.kind === 'steak';
+  line.perPack = steak ? prefs.steaksPerPack : 1;
+  line.packs = steak ? Math.ceil(count / prefs.steaksPerPack) : count;
+  if (p.kind === 'roast') line.feeds = Math.max(1, Math.round((line.eachKg * 1000) / (p.boneFactor ?? 1) / prefs.roastGramsPerPerson));
+  if (p.kind === 'piece' && p.cookingId === 'fillet' && line.eachKg > 0.6) line.feeds = Math.max(1, Math.round((line.eachKg * 1000) / prefs.roastGramsPerPerson));
+}
+
+function sizeProduct(line: Line, p: ProductSpec, wholeCarcassKg: number, prefs: ButcherPrefs, sides = 2): void {
   const w = line.weightKg;
   if (w <= 0) return;
   if (p.weightOnly) {
@@ -176,7 +190,8 @@ function sizeProduct(line: Line, p: ProductSpec, wholeCarcassKg: number, prefs: 
   }
   if (p.pieceGrams && p.sizeRef) {
     const each = (p.pieceGrams * pieceScale(wholeCarcassKg, p.sizeRef.carcassKg)) / 1000;
-    const count = Math.max(1, Math.round(w / each));
+    // Whole muscles are counted by anatomy (per side), not by weight.
+    const count = p.perSide ? p.perSide * sides : Math.max(1, Math.round(w / each));
     line.count = count;
     line.eachKg = w / count;
     line.perPack = 1;
@@ -241,10 +256,31 @@ export function compute(state: AppState): EngineResult {
   let tibiaUsedKg = 0;
   const balances: BalanceInfo[] = [];
   const allocations: AllocationInfo[] = [];
+  const loinPlans: { path: string; plan: LoinPlan }[] = [];
   for (const leaf of resolved.leaves) {
     const regionMeat = (carcassKg * leaf.region.meatPctOfCarcass.value * comp.meatFactor) / 100;
     const leafMeat = regionMeat * leaf.share;
     let products = leaf.option.products ?? [];
+    if (leaf.option.loinPlanner) {
+      const tb = LOIN_PRODUCTS.tBone, ph = LOIN_PRODUCTS.porterhouse;
+      const each = (p: ProductSpec) => (p.gramsPerCm! * thicknessFor(p, prefs)! * steakScale(wholeCarcassKg, p.sizeRef!.carcassKg)) / 1000;
+      const jointKg = (prefs.familySize * prefs.roastGramsPerPerson) / 1000;
+      const plan = planLoin(state.allocations?.[leaf.path] ?? {}, leafMeat, sides, each(tb), each(ph), jointKg);
+      loinPlans.push({ path: leaf.path, plan });
+      leftoverKg += plan.trimKg;
+      for (const o of plan.outputs) {
+        boneInCutsKg += o.boneKg;
+        const line: Line = {
+          productId: o.spec.id, name: o.spec.name, regionId: leaf.region.id, kind: o.spec.kind, weightKg: o.leanKg + o.boneKg,
+          thicknessCm: thicknessFor(o.spec, prefs), cookingId: o.spec.cookingId, path: leaf.path, regionName: leaf.region.name,
+          optionLabel: leaf.option.label, boneKg: o.boneKg, spec: o.spec,
+        };
+        if (o.count === undefined) sizeProduct(line, o.spec, wholeCarcassKg, prefs, sides);
+        else sizeFixedCount(line, o.spec, o.count, prefs);
+        lines.push(line);
+      }
+      continue;
+    }
     const al = leaf.option.allocation;
     const sizingOf: Record<string, AllocationUse['sizing']> = {};
     const unitsOf: Record<string, number> = {};
@@ -296,7 +332,7 @@ export function compute(state: AppState): EngineResult {
         spec: p,
       };
       const sizing = sizingOf[p.id] ?? 'standard';
-      if (sizing === 'standard') sizeProduct(line, p, wholeCarcassKg, prefs);
+      if (sizing === 'standard') sizeProduct(line, p, wholeCarcassKg, prefs, sides);
       else sizeByUnits(line, p, unitsOf[p.id], sizing, al!.unit, prefs, wholeCarcassKg);
       lines.push(line);
     }
@@ -409,6 +445,12 @@ export function compute(state: AppState): EngineResult {
   }
   if (prefs.mince.leanPct < poolLean && fatPoolKg < 0)
     add({ id: 'mince-fat-short', when: {}, severity: 'warning', message: 'There is not enough fat trim for mince this fatty. Pick a leaner mince.' });
+  for (const { plan } of loinPlans) {
+    if (plan.clamped.length)
+      add({ id: 'loin-clamped', when: {}, severity: 'warning', message: `Loin plan adjusted to fit: ${plan.clamped.join('; ')}. Thicker steaks or a fillet kept whole leave room for fewer T-bones.` });
+    if (plan.used.tbones > 0 && a.breed === 'jersey')
+      add({ id: 't-bone-small', when: {}, severity: 'tip', message: 'Jersey loins are small: T-bones will be modest in size. Consider 1¼" or thicker.', sourceIds: ['teagasc-5923'] });
+  }
   const small = lines.filter((l) => l.undersized);
   if (small.length)
     add({ id: 'roast-undersized', when: {}, severity: 'tip', message: `Not enough meat for a full ${prefs.familySize}-person joint: ${small.map((l) => `${l.name} (feeds ${l.feeds})`).join(', ')}. Consider steaks or diced beef for ${small.length > 1 ? 'these cuts' : 'this cut'}, or a smaller household size.` });
@@ -430,6 +472,7 @@ export function compute(state: AppState): EngineResult {
   const freezerBoneLitres = boneReturnedKg * FREEZER_LITRES_PER_KG.value;
 
   return {
+    loinPlans,
     balances,
     allocations,
     resolved,

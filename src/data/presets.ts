@@ -18,26 +18,26 @@ export const PRESETS: Preset[] = [
     label: 'Mostly steaks',
     description: 'As many grilling steaks as the animal will give.',
     selections: {
-      loin: 'separate', 'loin/striploin': 'sirloin-steaks', 'loin/fillet': 'steaks', rump: 'steaks',
+      rump: 'steaks',
       topside: 'round-steak', silverside: 'round-steak', 'thick-flank': 'round-steak', chuck: 'denver', feather: 'flat-iron', 'thin-flank': 'bavette',
     },
   },
   {
     id: 'roasts',
-    allocations: { 'fore-rib': { 'roast-on-bone': 99 } },
+    allocations: { 'fore-rib': { 'roast-on-bone': 99 }, loin: { wholeFillets: 99, sirloinRoasts: 99 } },
     label: 'Mostly roasts',
     description: 'Sunday joints sized for your household, with pot roasts from the round and shoulder.',
     selections: {
-      loin: 'separate', 'loin/striploin': 'sirloin-roast', 'loin/fillet': 'whole', rump: 'roast',
+      rump: 'roast',
       topside: 'roasts', silverside: 'pot-roast', 'thick-flank': 'pot-roast', chuck: 'housekeepers', clod: 'pot-roast', brisket: 'rolled', feather: 'braise',
     },
   },
   {
     id: 'traditional',
-    allocations: { 'fore-rib': { 'roast-on-bone': 99 } },
+    allocations: { 'fore-rib': { 'roast-on-bone': 99 }, loin: { tbones: 99 } },
     label: 'Traditional Irish',
     description: 'T-bones, rib on the bone, round roast and round steak, housekeeper’s cut and spiced beef, like a typical home-kill.',
-    selections: { loin: 't-bone', topside: 'split', silverside: 'cured', 'thick-flank': 'pot-roast', chuck: 'housekeepers', rump: 'steaks', brisket: 'salt' },
+    selections: { topside: 'split', silverside: 'cured', 'thick-flank': 'pot-roast', chuck: 'housekeepers', rump: 'steaks', brisket: 'salt' },
   },
   {
     id: 'freezer',
@@ -45,7 +45,7 @@ export const PRESETS: Preset[] = [
     label: 'Mince & stewing',
     description: 'Prime steaks only; everything else to mince, burgers and diced beef.',
     selections: {
-      loin: 'separate', rump: 'steaks', topside: 'diced', silverside: 'diced', 'thick-flank': 'diced', chuck: 'diced', clod: 'diced',
+      rump: 'steaks', topside: 'diced', silverside: 'diced', 'thick-flank': 'diced', chuck: 'diced', clod: 'diced',
       brisket: 'mince', feather: 'mince', 'thin-flank': 'mince', 'fore-shin': 'diced', 'hind-shin': 'diced', neck: 'mince', plate: 'mince',
     },
   },

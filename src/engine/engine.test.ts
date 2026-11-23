@@ -125,13 +125,13 @@ describe('selections', () => {
     expect(r.selections.plate).toBe('mince');
     expect(r.notices).toHaveLength(1);
   });
-  it('T-bone has no separate sirloin/fillet leaves', () => {
-    const r = resolveSelections({ loin: 't-bone' });
-    expect(r.leaves.filter((l) => l.region.id === 'loin').map((l) => l.option.id)).toEqual(['t-bone']);
+  it('the loin is a single planner leaf', () => {
+    const r = resolveSelections({});
+    expect(r.leaves.filter((l) => l.region.id === 'loin').map((l) => l.option.id)).toEqual(['plan']);
   });
   it('split parts receive their shares', () => {
-    const r = resolveSelections({ loin: 'separate' });
-    expect(r.leaves.filter((l) => l.region.id === 'loin').reduce((s, l) => s + l.share, 0)).toBeCloseTo(1, 9);
+    const r = resolveSelections({ rump: 'split' });
+    expect(r.leaves.filter((l) => l.region.id === 'rump').reduce((s, l) => s + l.share, 0)).toBeCloseTo(1, 9);
   });
 });
 
@@ -150,9 +150,10 @@ describe('sizes and counts', () => {
     expect(l.eachKg! * 1000).toBeLessThan(361 * 1.07);
   });
   it('whole AHDB pieces count two per carcass (one per side), one on a half share', () => {
-    const sel = { loin: 'separate', 'loin/fillet': 'whole' };
-    expect(compute(reference(sel)).lines.find((l) => l.productId === 'whole-fillet')!.count).toBe(2);
-    const half = { ...reference(sel), animal: { ...reference(sel).animal, share: 'half' as const } };
+    const whole = { ...reference({ rump: 'split' }), allocations: { loin: { wholeFillets: 99 } } };
+    expect(compute(whole).lines.find((l) => l.productId === 'whole-fillet')!.count).toBe(2);
+    expect(compute(whole).lines.find((l) => l.productId === 'tri-tip')!.count).toBe(2);
+    const half = { ...whole, animal: { ...whole.animal, share: 'half' as const } };
     expect(compute(half).lines.find((l) => l.productId === 'whole-fillet')!.count).toBe(1);
   });
   it('weight-only products have no count', () => {
@@ -170,8 +171,8 @@ describe('sizes and counts', () => {
 
 describe('bone and fat pools', () => {
   it('bone-in cuts reduce soup bones', () => {
-    const boned = compute(base({}, { selections: { loin: 'separate' }, allocations: { 'fore-rib': {} } })).balance;
-    const boneIn = compute(base({}, { selections: { loin: 't-bone' }, allocations: { 'fore-rib': { 'roast-on-bone': 99 } } })).balance;
+    const boned = compute(base({}, { allocations: { 'fore-rib': {} } })).balance;
+    const boneIn = compute(base({}, { allocations: { 'fore-rib': { 'roast-on-bone': 99 }, loin: { tbones: 99 } } })).balance;
     expect(boneIn.soupBoneKg).toBeLessThan(boned.soupBoneKg);
     expect(boneIn.boneInCutsKg).toBeGreaterThan(boned.boneInCutsKg);
   });
@@ -226,7 +227,7 @@ describe('Teagasc home-kill heifer calibration (the realistic factor is derived 
     const r = compute(
       base(
         { breed: 'hereford-x-dairy', sex: 'heifer', ageMonths: c.ageMonths, weightBasis: 'carcass', weightKg: c.carcassKg, conformation: c.estimatedGrade.conformation, fatClass: c.estimatedGrade.fat, hangingDays: 21 },
-        { selections: { loin: 't-bone', topside: 'split' }, allocations: { 'fore-rib': { 'roast-on-bone': 99 } } },
+        { selections: { topside: 'split' }, allocations: { 'fore-rib': { 'roast-on-bone': 99 }, loin: { tbones: 99 } } },
       ),
     );
     const [realistic, commercial] = r.balance.meatRangeKg;
@@ -324,7 +325,7 @@ describe('anatomical count bounds (per side)', () => {
     expect(count({}, 'tomahawk', a, { tomahawk: 99 })).toBe(4);
   });
   it.each(animals)('$breed $sex: one of each whole muscle; ≤ 3 short ribs', (a) => {
-    expect(count({ loin: 'separate', 'loin/fillet': 'whole' }, 'whole-fillet', a)).toBe(1);
+    expect(compute(base({ ...a, share: 'half' }, { allocations: { loin: { wholeFillets: 9 } } })).lines.find((l) => l.productId === 'whole-fillet')!.count).toBe(1);
     expect(count({ rump: 'split' }, 'picanha-whole', a)).toBe(1);
     expect(count({ rump: 'split' }, 'tri-tip', a)).toBe(1);
     expect(count({ 'thin-flank': 'bavette' }, 'bavette', a)).toBe(1);
@@ -368,10 +369,6 @@ describe('roast / steak balance (sirloin, topside)', () => {
       expect(b.meatKg + b.fatPoolKg + b.marrowKg + b.soupBoneKg + b.hangingLossKg + b.cuttingLossKg + b.butcherTrimKg).toBeCloseTo(b.carcassKg, 6);
     }
   });
-  it('works on a part (sirloin)', () => {
-    const r = compute(base({}, { selections: { loin: 'separate', 'loin/striploin': 'split' }, roastCounts: { 'loin/striploin': 1 } }));
-    expect(r.lines.find((l) => l.productId === 'sirloin-roast-half')!.count).toBe(1);
-  });
 });
 
 describe('fore rib, rib by rib', () => {
@@ -408,5 +405,78 @@ describe('fore rib, rib by rib', () => {
     expect(roast.cutNote).toMatch(/-rib joint/);
     const b = r.balance;
     expect(b.meatKg + b.fatPoolKg + b.marrowKg + b.soupBoneKg + b.hangingLossKg + b.cuttingLossKg + b.butcherTrimKg).toBeCloseTo(b.carcassKg, 6);
+  });
+});
+
+describe('loin planner', () => {
+  const plan = (req: Record<string, number>, share: 'whole' | 'half' = 'whole', prefs = DEFAULT_PREFS) =>
+    compute(base({ share }, { selections: { loin: 'plan' }, allocations: { loin: req }, prefs }));
+  const kgOf = (r: ReturnType<typeof plan>, ...ids: string[]) => r.lines.filter((l) => ids.includes(l.productId)).reduce((s, l) => s + l.weightKg, 0);
+  const closes = (r: ReturnType<typeof plan>) => {
+    const b = r.balance;
+    expect(b.meatKg + b.fatPoolKg + b.marrowKg + b.soupBoneKg + b.hangingLossKg + b.cuttingLossKg + b.butcherTrimKg).toBeCloseTo(b.carcassKg, 6);
+    expect(b.soupBoneKg).toBeGreaterThanOrEqual(0);
+  };
+
+  // Checks against the AHDB per-side kg directly (the old fixed loin options were checked equal before removal).
+  const loinKg = (r: ReturnType<typeof plan>) => (r.balance.carcassKg * REGION_BY_ID.loin.meatPctOfCarcass.value * r.comp.meatFactor) / 100;
+  it('empty plan: all sirloin as steaks, fillet (centre + head) as steaks, tail for stir-fry', () => {
+    const r = plan({});
+    const L = loinKg(r) / 9.71;
+    expect(kgOf(r, 'sirloin-steak')).toBeCloseTo(6.8 * L * 0.85, 9);
+    expect(kgOf(r, 'fillet-steak')).toBeCloseTo((1.25 + 1.04) * L * 0.94, 9);
+    expect(kgOf(r, 'fillet-tail')).toBeCloseTo(0.29 * L, 9);
+  });
+  it('one whole fillet per side = fillet chain off (AHDB 2.58 of 2.91 kg)', () => {
+    const r = plan({ wholeFillets: 2 });
+    expect(kgOf(r, 'whole-fillet')).toBeCloseTo((2.58 * loinKg(r)) / 9.71, 9);
+  });
+  it('all on the bone uses nearly all of the short loin (whole steaks only)', () => {
+    const r = plan({ tbones: 99 });
+    const L = loinKg(r) / 9.71;
+    const fullShortLoin = ((6.8 * 6) / 9 + 0.29 + 1.25) * L * 0.85;
+    const lean = r.lines.filter((l) => l.productId === 't-bone' || l.productId === 'porterhouse').reduce((s, l) => s + l.weightKg - l.boneKg, 0);
+    expect(lean / fullShortLoin).toBeGreaterThan(0.85);
+    expect(lean / fullShortLoin).toBeLessThanOrEqual(1 + 1e-9);
+  });
+
+  it('a couple of T-bones, a Wellington and the rest fillet steaks', () => {
+    const r = plan({ tbones: 2, centreFillets: 1 });
+    expect(r.lines.find((l) => l.productId === 't-bone')!.count).toBe(2);
+    expect(r.lines.find((l) => l.productId === 'chateaubriand')!.count).toBe(1);
+    expect(r.lines.find((l) => l.productId === 'fillet-steak')!.count!).toBeGreaterThan(0);
+    // T-bones go on the side not reserved for the Wellington
+    expect(r.loinPlans[0].plan.sides.map((s) => [s.reservation, s.tBones])).toEqual([['centre', 0], ['none', 2]]);
+    closes(r);
+  });
+  it('a centre fillet side only allows front-section T-bones; a whole-fillet side none', () => {
+    const half = plan({ centreFillets: 1, tbones: 99 }, 'half').loinPlans[0].plan;
+    expect(half.sides[0].porterhouses).toBe(0);
+    expect(half.used.tbones).toBe(half.sides[0].tBones);
+    const whole = plan({ wholeFillets: 1, tbones: 5 }, 'half').loinPlans[0].plan;
+    expect(whole.used.tbones).toBe(0);
+    expect(whole.clamped.length).toBe(1);
+  });
+  it('2 centre fillets on a half share is clamped to 1, with a notice', () => {
+    const r = plan({ centreFillets: 2 }, 'half');
+    expect(r.loinPlans[0].plan.used.centreFillets).toBe(1);
+    expect(r.advisories.some((a) => a.id === 'loin-clamped')).toBe(true);
+  });
+  it('thicker steaks leave room for fewer T-bones (clamped with a notice)', () => {
+    const thin = plan({ tbones: 99 }).loinPlans[0].plan.max.onBone;
+    const thick = plan({ tbones: 99 }, 'whole', { ...DEFAULT_PREFS, steakThicknessCm: inch(2) }).loinPlans[0].plan.max.onBone;
+    expect(thick).toBeLessThan(thin);
+  });
+  it('mass closes and soup bones stay ≥ 0 across plans and shares', () => {
+    for (const share of ['whole', 'half'] as const)
+      for (const req of [{}, { tbones: 99 }, { tbones: 99, sirloinRoasts: 99, wingOnBone: 1 }, { wholeFillets: 2, sirloinRoasts: 2 }, { tbones: 3, centreFillets: 1, sirloinRoasts: 1 }] as Record<string, number>[])
+        closes(plan(req, share));
+  });
+  it('sirloin joints: chosen count, on the bone uses the wing rib only', () => {
+    const r = plan({ sirloinRoasts: 2 });
+    expect(r.lines.find((l) => l.productId === 'sirloin-roast')!.count).toBe(2);
+    const w = plan({ sirloinRoasts: 99, wingOnBone: 1 });
+    expect(w.lines.find((l) => l.productId === 'wing-rib')!.count).toBe(w.loinPlans[0].plan.max.sirloinRoasts);
+    expect(w.lines.find((l) => l.productId === 'sirloin-steak')).toBeDefined();
   });
 });
