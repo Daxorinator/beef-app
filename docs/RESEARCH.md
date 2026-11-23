@@ -644,8 +644,73 @@ Sources: Irish Butchers' Guild <https://irishbutchersguild.com/beef/>, grassfed.
 - **Osso buco:** sold by weight only, since no slice weight was found.
 - **Tomahawk:** the extra long-bone weight is not included (unquantified).
 
-### 10.6 Still blocked (needs manual fetch)
-- **NZ MPI dressing-out review:** bot-protected. Would give DO% for Jersey and Jersey-cross bulls, heifers and dairy cows.
-- **Keane et al. (Grange):** Friesian vs Aberdeen Angus × Friesian vs Belgian Blue × Friesian steers (ScienceDirect 403). The snippet suggests kill-out of 501 / 514 / 542 g/kg, but the order is unconfirmed.
-- **J Dairy Sci 2018 Jersey proportion paper:** full text (403).
-- **McKenna et al. chuck & round retail yields:** full text (403).
+### 10.6 Papers supplied by the user (docs/sources)
+
+**NZ MPI dressing-out review (Muir & Thomson 2008):**
+- **Barton & Pleasants 1997** (steers in the same trial):
+
+  | Breed | Dressing |
+  |---|---|
+  | Jersey | 48.6 % |
+  | Friesian | 51.2 % |
+  | Ayrshire | 49.2 % |
+  | Angus | 52.7 % |
+  | Hereford | 54.1 % |
+  | Dairy mean | 49.9 % |
+  | Beef mean | 53.2 % |
+
+- **Manawatu Beef Packers** (empty live weight basis):
+
+  | Breed | Steers | Dressing |
+  |---|---|---|
+  | Angus | 13,853 | 56.3 % |
+  | Charolais | – | 57.4 % |
+  | Limousin | – | 57.2 % |
+  | Hereford | 4,462 | 56.0 % |
+  | Simmental | – | 56.6 % |
+  | Friesian | 2,077 | 54.0 % |
+
+- NZ beef steers average 53.3 % (282 kg), bulls 53.7 %. No NZ dairy-cow or beef-cow data.
+
+**Berry et al. 2018 (J Dairy Sci; Irish national data, 117,593 young cattle, 42,799 cows):**
+- Steers at 28 months:
+
+  | Sire × dam | Carcass | Conformation (15-pt) | Fat (15-pt) |
+  |---|---|---|---|
+  | HF × HF | 323.3 kg | 3.76 | 6.14 |
+  | Jersey × Jersey | 277.0 kg | 2.97 | 6.57 |
+  | Angus × HF | 327.4 kg | 5.37 | 7.00 |
+
+- Third-parity cows:
+
+  | Cow | Carcass | Conformation | Fat |
+  |---|---|---|---|
+  | HF | 280.1 kg | 2.44 | 5.94 |
+  | 50 % Jersey | 238.1 kg | – | – |
+  | Jersey | 204.3 kg | 1.92 | 6.16 |
+
+- Raw means: heifers 266.6 kg, steers 318.8 kg, bulls 303.7 kg, cows 266.9 kg.
+
+**McKenna et al. 2003 (J Anim Sci, retail cutting tests):**
+- Shoulder clod: total saleable 74.0–78.4 %, of which lean trimmings are about 36 %.
+- Top blade: flat iron steaks 43.9–48.9 %, 80 % lean trim 37.8–40.5 %.
+- Clod heart (arm roast): steaks/roasts 48.5–50.2 %, cubes 16.9–17.5 %, lean trim 22.5–22.8 %.
+- Peeled knuckle: steaks 40.0–46.1 %, cubes 24.7–25.3 %, lean trim 27.6–28.9 %.
+- Outside round flat: steaks/roasts 57.9–63.3 %, cubed steak 8.4–10.6 %, lean trim 17.5–19.7 %.
+- These replaced earlier fractions that had wrongly used *total* saleable yield (which includes lean trim): flat iron 0.855 → 0.464; silverside steaks 0.929 → 0.70; knuckle steaks 0.656 → 0.43; clod 0.762 → 0.494.
+
+**Keane & Drennan 2008 (Livestock Science; Teagasc Grange, Irish cold carcass = hot × 0.98):**
+
+| | HF | AA × HF | BB × HF |
+|---|---|---|---|
+| Kill-out (g/kg) | 501 | 514 | 542 |
+| Conformation (1–5) | 1.90 | 2.15 | 2.89 |
+| Fat (1–5) | 3.09 | 3.27 | 2.59 |
+| Carcass weight (kg) | 287 | 278 | 308 |
+| M. longissimus area (cm²/kg carcass) | 0.201 | 0.220 | 0.260 |
+| Indoor-finished side: lean (g/kg) | 641 | 653 | 722 |
+| Indoor-finished side: fat (g/kg) | 136 | 149 | 86 |
+| Indoor-finished side: bone (g/kg) | 224 | 198 | 193 |
+
+### 10.7 Still blocked
+- None of the four requested papers. All were supplied and read.
