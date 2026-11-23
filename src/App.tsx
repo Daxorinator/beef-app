@@ -93,6 +93,8 @@ export default function App() {
             region={region}
             onRegion={setRegion}
             onSelections={(selections) => setState((s) => ({ ...s, selections }))}
+            onAllocation={(path, plan) => setState((s) => ({ ...s, allocations: { ...s.allocations, [path]: plan } }))}
+            onRoastCount={(path, n) => setState((s) => ({ ...s, roastCounts: { ...s.roastCounts, [path]: n } }))}
             onThickness={(id, cm) => setState((s) => ({ ...s, prefs: { ...s.prefs, thicknessOverrides: { ...s.prefs.thicknessOverrides, [id]: cm } } }))}
           />
         )}

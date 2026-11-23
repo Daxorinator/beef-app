@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { PRESETS } from '../data/presets';
 import { REGION_BY_ID, REGIONS } from '../data/regions';
-import { compute, type EngineResult, type Line } from '../engine/compute';
+import { compute, type AllocationInfo, type BalanceInfo, type EngineResult, type Line } from '../engine/compute';
 import { exclusionReason, optionsAt } from '../engine/selections';
 import type { AppState } from '../engine/state';
 import type { CutOption, Selections } from '../model/types';
@@ -17,6 +17,8 @@ interface Props {
   onRegion: (id: string) => void;
   onSelections: (s: Selections) => void;
   onThickness: (productId: string, cm: number) => void;
+  onRoastCount: (path: string, roasts: number) => void;
+  onAllocation: (path: string, plan: Record<string, number>) => void;
 }
 
 function summarise(lines: Line[]): string {
@@ -61,7 +63,97 @@ function OptionList({ state, path, options, current, result, onPick }: {
   );
 }
 
-export function CutsStep({ state, result, region: regionId, onRegion, onSelections, onThickness }: Props) {
+const USE_COLOURS = ['var(--cat-roast)', 'var(--cat-mixed)', 'var(--cat-slow)', '#6b3b2a', 'var(--cat-steak)'];
+
+function AllocationPicker({ info, lines, sides, onChange }: { info: AllocationInfo; lines: Line[]; sides: number; onChange: (plan: Record<string, number>) => void }) {
+  const { allocation: al, plan, totalUnits } = info;
+  const [one, many] = al.unit;
+  const units = (n: number) => `${n} ${n === 1 ? one : many}`;
+  const set = (useId: string, n: number) => {
+    const next: Record<string, number> = {};
+    for (const u of al.uses) if (u.id !== al.remainder) next[u.id] = u.id === useId ? n : plan[u.id];
+    onChange(next);
+  };
+  const lineOf = (productId: string) => lines.find((l) => l.productId === productId);
+  const describe = (productId: string) => {
+    const l = lineOf(productId);
+    if (!l) return '';
+    const each = l.eachKg ? ` × ${weight(l.eachKg)}` : '';
+    return `${l.count ?? ''}${each}${l.cutNote ? ` (${l.cutNote})` : ''}${l.feeds ? `, feeds ${l.feeds}` : ''}`;
+  };
+  // Strip of ribs, side by side, coloured by use.
+  const strip: { useId: string; idx: number }[] = [];
+  al.uses.forEach((u, idx) => { for (let i = 0; i < plan[u.id]; i++) strip.push({ useId: u.id, idx }); });
+  return (
+    <div className="part allocation">
+      <h3>Plan your {many} <span className="opt">{units(totalUnits)}{sides === 2 ? ` (${al.unitsPerSide} per side)` : ''}</span></h3>
+      <div className="rib-strip" aria-hidden="true">
+        {strip.map((s, i) => (
+          <span key={i} style={{ background: USE_COLOURS[s.idx % USE_COLOURS.length] }} />
+        ))}
+      </div>
+      <ul className="alloc-list">
+        {al.uses.map((u, idx) => {
+          const n = plan[u.id];
+          const isRest = u.id === al.remainder;
+          const free = plan[al.remainder];
+          return (
+            <li key={u.id}>
+              <i className="sw" style={{ background: USE_COLOURS[idx % USE_COLOURS.length] }} />
+              <span className="alloc-label">
+                {u.label}
+                {n > 0 && <span className="hint"> {describe(u.product.id)}</span>}
+              </span>
+              {isRest ? (
+                <span className="alloc-rest">{units(n)} <span className="opt">(the rest)</span></span>
+              ) : (
+                <span className="stepper-ctl" role="group" aria-label={`${u.label}: ${many}`}>
+                  <button aria-label={`Fewer ${many} for ${u.label}`} disabled={n <= 0} onClick={() => set(u.id, n - 1)}>−</button>
+                  <output>{n}</output>
+                  <button aria-label={`More ${many} for ${u.label}`} disabled={free <= 0} onClick={() => set(u.id, n + 1)}>+</button>
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <p className="hint">Every {one} not given to something else becomes {al.uses.find((u) => u.id === al.remainder)!.label.toLowerCase()}, cut at your chosen thickness.</p>
+    </div>
+  );
+}
+
+function BalancePicker({ b, lines, familySize, onChange }: { b: BalanceInfo; lines: Line[]; familySize: number; onChange: (n: number) => void }) {
+  const roast = lines.find((l) => l.productId === b.roastId);
+  const steak = lines.find((l) => l.productId === b.steakId);
+  const roasts = roast?.count ?? 0;
+  // Steak size doesn't depend on the mix; take it from the line, or from the joint-free case.
+  const steakEach = steak?.eachKg ?? 0;
+  return (
+    <div className="part balance">
+      <h3>Roasts or steaks?</h3>
+      <div className="balance-row">
+        <span>{roast?.name ?? 'Roasts'}</span>
+        <div className="stepper-ctl" role="group" aria-label="Number of roasts">
+          <button aria-label="Fewer roasts" disabled={roasts <= 0} onClick={() => onChange(roasts - 1)}>−</button>
+          <output aria-live="polite">{roasts}</output>
+          <button aria-label="More roasts" disabled={roasts >= b.maxRoasts} onClick={() => onChange(roasts + 1)}>+</button>
+        </div>
+      </div>
+      <input type="range" min={0} max={b.maxRoasts} step={1} value={roasts} aria-label="Roasts" onChange={(e) => onChange(Number(e.target.value))} />
+      <p className="hint">
+        {roasts} joint{roasts === 1 ? '' : 's'} of about {weight(b.jointKg)} (for {familySize}) · the rest as {steak?.count ?? 0} {steak ? steak.name.toLowerCase() : 'steaks'}
+        {steak?.eachKg ? ` (~${weight(steak.eachKg)} each)` : ''}. Up to {b.maxRoasts} joints from this cut.
+      </p>
+      {steakEach > 0 && b.maxRoasts > 0 && (
+        <p className="hint">
+          Each joint costs about {(b.allSteaksKg / steakEach / b.maxRoasts).toFixed(1)} steaks: a roast uses the whole cut, while only the best muscle is cut into steaks (the rest goes to mince).
+        </p>
+      )}
+    </div>
+  );
+}
+
+export function CutsStep({ state, result, region: regionId, onRegion, onSelections, onThickness, onRoastCount, onAllocation }: Props) {
   const region = REGION_BY_ID[regionId];
   const sel = result.resolved.selections;
   const top = sel[region.id];
@@ -121,6 +213,14 @@ export function CutsStep({ state, result, region: regionId, onRegion, onSelectio
               <h3>{part.name} <span className="opt">{Math.round(part.share * 100)} % of the {region.name.toLowerCase()}</span></h3>
               <OptionList state={state} path={`${region.id}/${part.id}`} options={part.options} current={sel[`${region.id}/${part.id}`]} result={result} onPick={(id) => pick(`${region.id}/${part.id}`, id)} />
             </div>
+          ))}
+
+          {result.allocations.filter((x) => x.path === region.id).map((x) => (
+            <AllocationPicker key={x.path} info={x} lines={regionLines} sides={state.animal.share === 'half' ? 1 : 2} onChange={(plan) => onAllocation(x.path, plan)} />
+          ))}
+
+          {result.balances.filter((b) => b.path === region.id || b.path.startsWith(`${region.id}/`)).map((b) => (
+            <BalancePicker key={b.path} b={b} lines={regionLines} familySize={state.prefs.familySize} onChange={(n) => onRoastCount(b.path, n)} />
           ))}
 
           {regionLines.some((l) => l.spec?.allowedThicknessCm) && (
